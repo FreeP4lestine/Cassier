@@ -25,16 +25,21 @@ LMBTN := [[0, 0xCCCCCC, , 0x000000, 0, , 0xFFFFFF, 1]
 , [0, 0x008000, , 0xFFFF00, 0, , 0xFFFFFF, 1]
 , [0, 0x008000, , 0xFFFFFF, 0, , 0x008000, 1]]
 
+EBTN := [[0, 0xCCCCCC, , 0x000000, 0, , 0x6B8000, 1]
+, [0, 0x008000, , 0xFFFFFF, 0, , 0xFFFFFF, 1]
+, [0, 0x008000, , 0xFFFF00, 0, , 0xFFFFFF, 1]
+, [0, 0x008000, , 0xFFFFFF, 0, , 0x008000, 1]]
+
 ;==============================================================================
 
 Gui, Main:-Caption +HwndMain
 Gui, Main:Add, Picture, x0 y0 w1000 h500, Img\bg.png
 
 Gui, Main:Font, s10 Bold, Calibri
-Gui, Main:Add, Button, xm+867 ym+465 w100 h20 HwndBtn gQuit, % _3
+Gui, Main:Add, Button, xm+865 ym+465 w100 h20 HwndBtn gQuit, % _3
 ImageButton.Create(Btn, RedBTN*)
 
-Gui, Main:Font, s15
+Gui, Main:Font, s13
 
 Gui, Main:Add, Button, x0 y10 HwndBtn w199 h40 gOpenMain Disabled vBtn1, % _4
 ImageButton.Create(Btn, LMBTN*)
@@ -51,6 +56,41 @@ ImageButton.Create(Btn, LMBTN*)
 Gui, Main:Add, Button, x0 y50 HwndBtn w199 h40 gSubmit vBtn5, % _8
 ImageButton.Create(Btn, LMBTN*)
 
+; Main Controls
+MainCtrlList := "Bc,Qn,Nm,Sum,LV0,$GivenMoney,$AllSum,$Change"
+Gui, Main:Font, s25
+;Gui, Main:Add, Edit, xm+450 ym+10 w260 vBc Center -E0x200 gAnalyzeAvail Border
+;Gui, Main:Add, Edit, xm+550 ym+80 w70 vQn Center -E0x200 ReadOnly HwndQn cGreen gAnalyzeAvail, x1
+;CtlColors.Attach(Qn, "E6E6E6", "008000")
+;Gui, Main:Add, Edit, xm+205 ym+80 w345 vNm -E0x200 ReadOnly HwndNm Center
+;CtlColors.Attach(Nm, "E6E6E6", "008000")
+;Gui, Main:Add, Edit, xm+620 ym+80 w345 vSum -E0x200 ReadOnly HwndSum Center
+;CtlColors.Attach(Sum, "E6E6E6", "008000")
+;Gui, Main:Font, s50
+;Gui, Main:Add, Edit, xm+205 ym+20 w254 vGivenMoney -E0x200 cGreen gCalc Center Border Hidden
+;Gui, Main:Add, Edit, xm+459 ym+20 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
+;CtlColors.Attach(AS, "E6E6E6", "008000")
+;Gui, Main:Add, Edit, xm+713 ym+20 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
+;CtlColors.Attach(C, "E6E6E6", "FF0000")
+;Gui, Main:Font, s25
+;Gui, Main:Add, ListView, xm+205 ym+145 w760 r7 -Hdr Grid vLV0 BackgroundE6E6E6, Barcode|Name|Quantity|Price
+;Gui, Main:Default
+;LV_ModifyCol(1, "0 Center")
+;LV_ModifyCol(2, "250 Center")
+;LV_ModifyCol(3, "250 Center")
+;LV_ModifyCol(4, "256 Center")
+; ==========================================================================================================
+
+; Ensure Dot
+EnsureCtrlList := "LV1,EBtn"
+Gui, Main:Add, Button, xm+205 ym+20 vEBtn w760 h80 hwndBtn
+ImageButton.Create(Btn, EBTN*)
+Gui, Main:Add, ListView, xm+205 ym+145 w760 r7 -Hdr Grid vLV1 BackgroundE6E6E6, Barcode|Name|Quantity|Price
+Gui, Main:Default
+LV_ModifyCol(1, "0 Center")
+LV_ModifyCol(2, "250 Center")
+LV_ModifyCol(3, "250 Center")
+LV_ModifyCol(4, "256 Center")
 Gui, Main:Show, w1000 h500
 Return
 
@@ -89,7 +129,7 @@ OpenMain:
     ;    CtlColors.Attach(AS, "FFFFFF", "008000")
     ;    Gui, Seller:Add, Edit, xm+640 ym+50 w320 h90 vChange HwndC -E0x200 Border Hidden ReadOnly Center
     ;    CtlColors.Attach(C, "FFFFFF", "FF0000")
-    
+
     ;    Gui, Seller:Font, s25
     ;    Gui, Seller:Add, Edit, xm+320 ym+100 w320 vQn Center -E0x200 h42 ReadOnly Border HwndQn gAnalyzeAvail , x 1
     ;    CtlColors.Attach(Qn, "FFFFFF", "008000")
@@ -99,15 +139,15 @@ OpenMain:
     ;    CtlColors.Attach(Sum, "FFFFFF", "008000")
     ;    Gui, Seller:Add, ListView, xm ym+150 w960 r10 -Hdr Grid vLV, Barcode|Name|Quantity|Price
     ;    Gui, Seller:Default
-;
+    ;
     ;    LV_ModifyCol(1, "0 Center")
     ;    LV_ModifyCol(2, "317 Center")
     ;    LV_ModifyCol(3, "320 Center")
     ;    LV_ModifyCol(4, "318 Center")
-;
+    ;
     ;    Gui, Seller:Font, s10
     ;    Gui, Seller:Add, Edit, xm+640 ym+600 w320 -E0x200 Right ReadOnly r2 vValid HwndValid -VScroll
-;
+    ;
     ;}
     ;Gui, Seller:Show, w1000 h700
     ;GuiControl, Seller:Focus, Bc
@@ -324,20 +364,22 @@ Return
 Return
 
 ~Up::
-    If WinActive("ahk_id " Sell) {
-        Gui, Seller:Submit, NoHide
-        Qn := SubStr(Qn, 3)
-        GuiControl, Seller:, Qn, % "x " Qn += 1
+    If WinActive("ahk_id " Main) {
+        Gui, Main:Submit, NoHide
+        Qn := SubStr(Qn, 2)
+        GuiControl, Main:, Qn, % "x" Qn += 1
     }
+    Sleep, 125
 Return
 
 ~Down::
-    If WinActive("ahk_id " Sell) {
-        Gui, Seller:Submit, NoHide
-        Qn := SubStr(Qn, 3)
+    If WinActive("ahk_id " Main) {
+        Gui, Main:Submit, NoHide
+        Qn := SubStr(Qn, 2)
         If (Qn > 1)
-            GuiControl, Seller:, Qn, % "x " Qn -= 1
+            GuiControl, Main:, Qn, % "x" Qn -= 1
     }
+    Sleep, 125
 Return
 
 ~Delete::
