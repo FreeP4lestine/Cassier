@@ -60,7 +60,8 @@ ImageButton.Create(Btn, LMBTN*)
 RMS := "#1"
 MainCtrlList := "Bc,Qn,Nm,Sum,LV0,$GivenMoney,$AllSum,$Change"
 Gui, Main:Font, s25
-Gui, Main:Add, Edit, xm+450 ym+10 w260 vBc Center -E0x200 gAnalyzeAvail Border
+Gui, Main:Add, Edit, xm+450 ym+10 w260 vBc Center -E0x200 gAnalyzeAvail Border HwndBc_
+CtlColors.Attach(Bc, "FFFFFF", "008000")
 Gui, Main:Add, Edit, xm+460 ym+80 w250 vQn Center -E0x200 ReadOnly HwndQn gAnalyzeQn, x1
 CtlColors.Attach(Qn, "E6E6E6", "008000")
 Gui, Main:Add, Edit, xm+205 ym+80 w250 vNm -E0x200 ReadOnly HwndNm Center
@@ -68,7 +69,7 @@ CtlColors.Attach(Nm, "E6E6E6", "000080")
 Gui, Main:Add, Edit, xm+715 ym+80 w250 vSum -E0x200 ReadOnly HwndSum Center
 CtlColors.Attach(Sum, "E6E6E6", "800000")
 Gui, Main:Font, s50
-Gui, Main:Add, Edit, xm+205 ym+20 w254 vGivenMoney -E0x200 cGreen gCalc Center Border Hidden
+Gui, Main:Add, Edit, xm+205 ym+20 w254 vGivenMoney -E0x200 cBlue gCalc Center Border Hidden
 Gui, Main:Add, Edit, xm+459 ym+20 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
 CtlColors.Attach(AS, "E6E6E6", "008000")
 Gui, Main:Add, Edit, xm+713 ym+20 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
@@ -76,6 +77,8 @@ CtlColors.Attach(C, "E6E6E6", "FF0000")
 Gui, Main:Font, s15
 Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV0 BackgroundE6E6E6, Barcode|Name|Quantity|Price
 Gui, Main:Default
+
+Gui, Main:ListView, LV0
 LV_ModifyCol(1, "0 Center")
 LV_ModifyCol(2, "250 Center")
 LV_ModifyCol(3, "254 Center")
@@ -83,38 +86,57 @@ LV_ModifyCol(4, "252 Center")
 ; ==========================================================================================================
 
 ; Ensure Dot
-EnsureCtrlList := "LV1,EBtn"
-;Gui, Main:Font, s25
-;Gui, Main:Add, Button, xm+205 ym+20 vEBtn w760 h80 hwndBtn, % _9
-;ImageButton.Create(Btn, EBTN*)
-;Gui, Main:Font, s15
-;Gui, Main:Add, ListView, xm+205 ym+145 w760 r7 -Hdr Grid vLV1 BackgroundE6E6E6, Barcode|Name|Quantity|Price
-;Gui, Main:Default
-;LV_ModifyCol(1, "0 Center")
-;LV_ModifyCol(2, "250 Center")
-;LV_ModifyCol(3, "250 Center")
-;LV_ModifyCol(4, "256 Center")
+EnsureCtrlList := "LV1,EnsBtn"
+Gui, Main:Font, s25
+Gui, Main:Add, Button, xm+205 ym+20 vEnsBtn w760 h80 hwndBtn Hidden, % _9
+ImageButton.Create(Btn, EBTN*)
+Gui, Main:Font, s15
+Gui, Main:Add, ListView, xm+205 ym+145 w760 r7 -Hdr Grid vLV1 BackgroundE6E6E6 Hidden, Barcode|Name|Quantity|Price
+
+Gui, Main:ListView, LV1
+LV_ModifyCol(1, "0 Center")
+LV_ModifyCol(2, "250 Center")
+LV_ModifyCol(3, "250 Center")
+LV_ModifyCol(4, "256 Center")
 ; ==========================================================================================================
 
 ; Define
-;DefineCtrlList := "Dbc,Dnm,Dbp,Dsp,LV2"
-;Gui, Main:Add, Edit, xm+205 ym+80 w185 Center Border vDbc HwndDbc_ -E0x200 gClearDbc
-;CtlColors.Attach(Dbc_, "FFFFFF", "000000")
-;Gui, Main:Add, Edit, xm+396 ym+80 w185 Center Border vDnm HwndDnm_ -E0x200 gClearDnm
-;CtlColors.Attach(Dnm_, "FFFFFF", "000000")
-;Gui, Main:Add, Edit, xm+589 ym+80 w185 Center Border vDbp HwndDbp_ -E0x200 gClearDbp
-;CtlColors.Attach(Dbp_, "FFFFFF", "000000")
-;Gui, Main:Add, Edit, xm+780 ym+80 w185 Center Border vDsp HwndDsp_ -E0x200 gClearDsp
-;CtlColors.Attach(Dsp_, "FFFFFF", "000000")
-;Gui, Main:Font, s15
-;Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV2 BackgroundE6E6E6 c0x800000, Barcode|Name|Quantity|Price
-;Gui, Main:Default
-;LV_ModifyCol(1, "185 Center")
-;LV_ModifyCol(2, "192 Center")
-;LV_ModifyCol(3, "192 Center")
-;LV_ModifyCol(4, "186 Center")
+DefineCtrlList := "Dbc,Dnm,Dbp,Dsp,LV2"
+Gui, Main:Add, Edit, xm+205 ym+80 w185 Center Border vDbc HwndDbc_ -E0x200 gClearDbc Hidden
+CtlColors.Attach(Dbc_, "FFFFFF", "000000")
+Gui, Main:Add, Edit, xm+396 ym+80 w185 Center Border vDnm HwndDnm_ -E0x200 gClearDnm Hidden
+CtlColors.Attach(Dnm_, "FFFFFF", "000000")
+Gui, Main:Add, Edit, xm+589 ym+80 w185 Center Border vDbp HwndDbp_ -E0x200 gClearDbp Hidden
+CtlColors.Attach(Dbp_, "FFFFFF", "000000")
+Gui, Main:Add, Edit, xm+780 ym+80 w185 Center Border vDsp HwndDsp_ -E0x200 gClearDsp Hidden
+CtlColors.Attach(Dsp_, "FFFFFF", "000000")
+Gui, Main:Font, s15
+Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV2 BackgroundE6E6E6 c0x800000 Hidden, Barcode|Name|Quantity|Price
+
+Gui, Main:ListView, LV2
+LV_ModifyCol(1, "185 Center")
+LV_ModifyCol(2, "192 Center")
+LV_ModifyCol(3, "192 Center")
+LV_ModifyCol(4, "186 Center")
+; ==========================================================================================================
+
+; StockPile
+StockPileCtrlList := "Pnm,Pqn,LV3"
+Gui, Main:Font, s25
+Gui, Main:Add, Edit, xm+205 ym+80 w380 Right ReadOnly vPnm HwndPnm_ -E0x200 Hidden
+CtlColors.Attach(Pnm_, "E6E6E6", "000000")
+Gui, Main:Add, Edit, xm+585 ym+80 w380 Left Border vPqn HwndPqn_ -E0x200 Hidden
+CtlColors.Attach(Pqn_, "FFFFFF", "0000FF")
+Gui, Main:Font, s15
+Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV3 BackgroundE6E6E6 c0x800000 gDisplayQn Hidden, Barcode|Name|Quantity
+
+Gui, Main:ListView, LV3
+LV_ModifyCol(1, "0 Center")
+LV_ModifyCol(2, "377 Right")
+LV_ModifyCol(3, "380 Left")
 
 Gui, Main:Show, w1000 h500
+Gui, Main:ListView, LV0
 Return
 
 :*C:GenUMIDForThisUser::
@@ -130,126 +152,53 @@ Return
 OpenMain:
     Loop, Parse, % "2435"
         GuiControl, Main:Enabled, Btn%A_LoopField%
+    Hide(EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
     GuiControl, Main:Disabled, Btn1
-
-    ;If !WinExist("ahk_id " Sell) {
-    ;    Gui, Main:-Caption +HwndSell
-    ;    Gui, Main:Color, 0x35363A
-    ;    Gui, Main:Font, s10 Bold, Calibri
-    ;    Gui, Main:Add, Edit, xm ym w800 vMsg -E0x200 ReadOnly cFFFF00
-    ;    Gui, Main:Font, s15
-    ;    Gui, Main:Add, Button, xm+840 ym w119 h40 HwndExit gQuitSeller, % _3
-    ;    ImageButton.Create(Exit, [[0, "Img\E_Normal.png",, 0xFF0000]
-    ;    , [0, "Img\E_Hover.png" ,, 0xFFFFFF]
-    ;    , [0, "Img\E_Hover.png" ,, 0xFF0000]]*)
-
-    ;    Gui, Main:Font, s25
-    ;    Gui, Main:Add, Edit, xm ym+50 w320 vBc Center -E0x200 h42 gAnalyzeAvail Border
-
-    ;    Gui, Main:Font, s50
-    ;    Gui, Main:Add, Edit, xm ym+50 w320 h90 vGivenMoney -E0x200 Border Hidden cGreen gCalc Center
-    ;    Gui, Main:Add, Edit, xm+320 ym+50 w320 h90 vAllSum HwndAS -E0x200 Border Hidden ReadOnly Center
-    ;    CtlColors.Attach(AS, "FFFFFF", "008000")
-    ;    Gui, Main:Add, Edit, xm+640 ym+50 w320 h90 vChange HwndC -E0x200 Border Hidden ReadOnly Center
-    ;    CtlColors.Attach(C, "FFFFFF", "FF0000")
-
-    ;    Gui, Main:Font, s25
-    ;    Gui, Main:Add, Edit, xm+320 ym+100 w320 vQn Center -E0x200 h42 ReadOnly Border HwndQn gAnalyzeAvail , x 1
-    ;    CtlColors.Attach(Qn, "FFFFFF", "008000")
-    ;    Gui, Main:Add, Edit, xm ym+100 w320 vNm -E0x200 h42 ReadOnly HwndNm Center Border
-    ;    CtlColors.Attach(Nm, "FFFFFF", "008000")
-    ;    Gui, Main:Add, Edit, xm+640 ym+100 w320 vSum -E0x200 h42 ReadOnly HwndSum Center Border
-    ;    CtlColors.Attach(Sum, "FFFFFF", "008000")
-    ;    Gui, Main:Add, ListView, xm ym+150 w960 r10 -Hdr Grid vLV, Barcode|Name|Quantity|Price
-    ;    Gui, Main:Default
-    ;
-    ;    LV_ModifyCol(1, "0 Center")
-    ;    LV_ModifyCol(2, "317 Center")
-    ;    LV_ModifyCol(3, "320 Center")
-    ;    LV_ModifyCol(4, "318 Center")
-    ;
-    ;    Gui, Main:Font, s10
-    ;    Gui, Main:Add, Edit, xm+640 ym+600 w320 -E0x200 Right ReadOnly r2 vValid HwndValid -VScroll
-    ;
-    ;}
-    ;Gui, Main:Show, w1000 h700
-    ;GuiControl, Main:Focus, Bc
-Return
-
-Prof:
-    Loop, Parse, % "1235"
-        GuiControl, Main:Enabled, Btn%A_LoopField%
-    GuiControl, Main:Disabled, Btn4
-Return
-
-Define:
-    Loop, Parse, % "1435"
-        GuiControl, Main:Enabled, Btn%A_LoopField%
-    GuiControl, Main:Disabled, Btn2
-    LoadDefined()
-    ;If !WinExist("ahk_id " Define) {
-    ;    Gui, Def:-Caption +HwndDefine
-    ;    Gui, Def:Color, 0x35363A
-    ;    Gui, Def:Font, s10 Bold, Calibri
-    ;    Gui, Def:Add, Edit, xm ym w800 vMsg -E0x200 ReadOnly cFF0000
-    ;    Gui, Def:Font, s15
-    ;    Gui, Def:Add, Button, xm+840 ym w119 h40 HwndExit gQuitDefiner, % _3
-    ;    ImageButton.Create(Exit, [[0, "Img\E_Normal.png",, 0xFF0000]
-    ;    , [0, "Img\E_Hover.png" ,, 0xFFFFFF]
-    ;    , [0, "Img\E_Hover.png" ,, 0xFF0000]]*)
-    ;    xp := 0
-    ;    Loop, 4 {
-    ;        Gui, Def:Add, Edit, xm+%xp% ym+50 w239 Center vDE%A_Index% -E0x200 gClearMsg
-    ;        xp += 240
-    ;    }
-    ;    Gui, Def:Add, ListView, xm ym+85 w%xp% -Hdr Grid r20 BackgroundGray, Barcode|Name|Buy Price|Sell Price
-    ;    Gui, Def:Default
-    ;    LV_ModifyCol(1, "237 +Center")
-    ;    LV_ModifyCol(2, "240 +Center")
-    ;    LV_ModifyCol(3, "240 +Center")
-    ;    LV_ModifyCol(4, "239 +Center")
-    ;    LoadDefined()
-    ;}
-    ;Gui, Def:Show, w1000 h700
-    ;GuiControl, Def:Focus, DE1
-Return
-
-StockPile:
-    Loop, Parse, % "1245"
-        GuiControl, Main:Enabled, Btn%A_LoopField%
-    GuiControl, Main:Disabled, Btn3
-
-    ;
-    ;If !WinExist("ahk_id " SP) {
-    ;    Gui, Stock:-Caption +HwndDefine
-    ;    Gui, Stock:Color, 0x35363A
-    ;    Gui, Stock:Font, s10 Bold, Calibri
-    ;    Gui, Stock:Add, Edit, xm ym w800 vMsg -E0x200 ReadOnly cFF0000
-    ;    Gui, Stock:Font, s15
-    ;    Gui, Stock:Add, Button, xm+840 ym w119 h40 HwndExit gQuitStock, % _3
-    ;    ImageButton.Create(Exit, [[0, "Img\E_Normal.png",, 0xFF0000]
-    ;    , [0, "Img\E_Hover.png" ,, 0xFFFFFF]
-    ;    , [0, "Img\E_Hover.png" ,, 0xFF0000]]*)
-    ;    ;xp := 0
-    ;    ;Loop, 4 {
-    ;    ;    Gui, Def:Add, Edit, xm+%xp% ym+50 w239 Center vDE%A_Index% -E0x200 gClearMsg
-    ;    ;    xp += 240
-    ;    ;}
-    ;    ;Gui, Def:Add, ListView, xm ym+85 w%xp% -Hdr Grid r20 BackgroundGray, Barcode|Name|Buy Price|Sell Price
-    ;    ;Gui, Def:Default
-    ;    ;LV_ModifyCol(1, "237 +Center")
-    ;    ;LV_ModifyCol(2, "240 +Center")
-    ;    ;LV_ModifyCol(3, "240 +Center")
-    ;    ;LV_ModifyCol(4, "239 +Center")
-    ;}
-    ;Gui, Stock:Show, w1000 h700
+    Show(MainCtrlList)
+    RMS := "#1"
+    Gui, Main:ListView, LV0
 Return
 
 Submit:
     Loop, Parse, % "1234"
         GuiControl, Main:Enabled, Btn%A_LoopField%
+    Hide(MainCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
     GuiControl, Main:Disabled, Btn5
+    Show(EnsureCtrlList)
+    RMS := "#5"
+    Gui, Main:ListView, LV1
+Return
 
+Define:
+    Loop, Parse, % "1435"
+        GuiControl, Main:Enabled, Btn%A_LoopField%
+    Hide(MainCtrlList "," EnsureCtrlList "," StockPileCtrlList "," ProfitCtrlList)
+    GuiControl, Main:Disabled, Btn2
+    Show(DefineCtrlList)
+    Gui, Main:ListView, LV2
+    LoadDefined()
+    RMS := "#2"
+Return
+
+StockPile:
+    Loop, Parse, % "1245"
+        GuiControl, Main:Enabled, Btn%A_LoopField%
+    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," ProfitCtrlList)
+    GuiControl, Main:Disabled, Btn3
+    Show(StockPileCtrlList)
+    Gui, Main:ListView, LV3
+    LoadStockList()
+    RMS := "#3"
+Return
+
+Prof:
+    Loop, Parse, % "1235" 
+        GuiControl, Main:Enabled, Btn%A_LoopField%
+    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList)
+    GuiControl, Main:Disabled, Btn4
+    Show(ProfitCtrlList)
+    RMS := "#4"
+    Gui, Main:ListView, LV4
 Return
 
 Enter:
@@ -291,6 +240,14 @@ Enter:
     Gui, Main:Show, w750 h320
 Return
 
+DisplayQn:
+    
+    LV_GetText(Sqn, Row := LV_GetNext(), 3)
+    LV_GetText(Snm, Row := LV_GetNext(), 2)
+    GuiControl, Main:, Pqn, % Sqn
+    GuiControl, Main:, Pnm, % Snm
+Return
+
 ClearDbc:
     Gui, Main:Submit, NoHide
     CtlColors.Change(Dbc_, "FFFFFF", "000000")
@@ -299,6 +256,7 @@ ClearDbc:
         ShakeControl("Main", "Dbc")
     }
 Return
+
 ClearDnm:
     Gui, Main:Submit, NoHide
     CtlColors.Change(Dnm_, "FFFFFF", "000000")
@@ -328,10 +286,39 @@ Return
 Enter::
     Gui, Main:Submit, NoHide
     Gui, Main:Default
+
     If (RMS = "#1") {
-        Filled := (Nm) && (Qn) && (Sum)
-        If (Filled) {
-            LV_Add("", Bc, Nm, Qn, Sum)
+        GuiControlGet, Visi, Main:Visible, Nm
+        If (Visi) {
+            Filled := (Nm) && (Qn) && (Sum)
+            If (Filled) {
+                LV_Add("", Bc, Nm, Qn, Sum)
+                GuiControl, Main:, Bc
+            }
+        } Else {
+            DB_Write("Curr\" A_Now ".db", Sum_Data[2])
+
+            GuiControl, Main:, GivenMoney
+            GuiControl, Main:, AllSum
+            GuiControl, Main:, Change
+
+            GuiControl, Main:Hide, GivenMoney
+            GuiControl, Main:Hide, AllSum
+            GuiControl, Main:Hide, Change
+
+            GuiControl, Main:Show, Bc
+            GuiControl, Main:Show, Nm
+            GuiControl, Main:Show, Qn
+            GuiControl, Main:Show, Sum
+
+            GuiControl, Main:, Bc
+            GuiControl, Main:, Nm
+            GuiControl, Main:, Qn, x1
+            GuiControl, Main:, Sum
+
+            
+            LV_Delete()
+            GuiControl, Main:Focus, Bc
         }
     }
     If (RMS = "#3") {
@@ -363,9 +350,9 @@ Enter::
                 PrevData := DB_Read("Sets\PD.db")
             }
 
-            If !InStr(PrevData, "[" Dbc) {
-                DB_Write("Sets\PD.db", PrevData "[" Dbc ";" Dnm ";" Dbp ";" Dsp "]")
-                Gui, Main:Default
+            If !InStr(PrevData, "|" Dbc) && (InStr(PrevData, Dbc) != 1) {
+                DB_Write("Sets\PD.db", PrevData "|" Dbc ";" Dnm ";" Dbp ";" Dsp)
+                
                 LV_Add("", Dbc, Dnm, Dbp, Dsp)
             }
         }
@@ -373,10 +360,10 @@ Enter::
     If WinActive("ahk_id " Sell) {
         Gui, Main:Submit, NoHide
         GuiControlGet, Visi, Main:Visible, Nm
-
+        Msgbox % Visi
         If (Visi) {
             If (Nm) {
-                Gui, Main:Default
+                
                 LV_Add("", Bc, Nm, Qn, Sum)
                 GuiControl, Main:, Bc
             }
@@ -399,7 +386,7 @@ Enter::
             GuiControl, Main:Show, Qn
             GuiControl, Main:Show, Sum
 
-            Gui, Main:Default
+            
             LV_Delete()
             GuiControl, Main:Focus, Bc
 
@@ -432,6 +419,7 @@ Down::
 Return
 #If
 
+#If WinActive("ahk_id " Main)
 Delete::
     If WinActive("ahk_id " Define) {
         Gui, Def:Default
@@ -456,18 +444,19 @@ Delete::
         LV_Delete(LV_GetNext())
     }
     If WinActive("ahk_id " Sell) {
-        Gui, Main:Default
+        
         LV_Delete(LV_GetNext())
     }
 Return
+#If
 
-~Space::
-    If WinActive("ahk_id " Sell) {
-        Gui, Main:Default
-        Gui, Main:Submit, NoHide
-        GuiControl, Main:, Msg
-        LV_GetText(Noun, 1, 1)
-        If (Noun) {
+#If WinActive("ahk_id " Main)
+Space::
+    Gui, Main:Submit, NoHide
+    Gui, Main:Default
+    If (RMS = "#1") {
+        LV_GetText(Bcc, 1, 1)
+        If (Bcc) {
             GuiControl, Main:Hide, Bc
             GuiControl, Main:Hide, Nm
             GuiControl, Main:Hide, Qn
@@ -478,11 +467,10 @@ Return
             GuiControl, Main:, AllSum, % (Sum_Data := CalculateSum())[1]
             Sleep, 1000
             GuiControl, Main:Focus, GivenMoney
-        } Else If (Nm) {
-            GuiControl, Main:, Msg, Warning: No records are found, press ENTER please!
         }
     }
 Return
+#If
 
 Calc:
     Gui, Main:Submit, NoHide
@@ -505,11 +493,11 @@ AnalyzeAvail:
     GuiControl, Main:, Sum
     GuiControl, Main:, Qn, x1
 
-    CtlColors.Change(Bc, "FFFFFF", "008000")
+    CtlColors.Change(Bc_, "FFFFFF", "008000")
     If (Bc) {
         If Bc is not Digit
         {
-            CtlColors.Change(Bc, "FF8080", "008000")
+            CtlColors.Change(Bc_, "FF8080", "008000")
             ShakeControl("Main", "Bc")
             Return
         }
@@ -517,13 +505,15 @@ AnalyzeAvail:
         Data := DB_Read("Sets\PD.db")
         Data := SubStr(Data, 2, StrLen(Data) - 2)
 
-        Loop, Parse, Data, ][
+        ;Msgbox % Data
+        Loop, Parse, Data, |
         {
             If (SubStr(A_LoopField, 1, InStr(A_LoopField, ";")) = Bc ";") {
                 Defs := StrSplit(A_LoopField, ";")
             GuiControl, Main:, Nm, % Defs[2]
-            GuiControl, Main:, Qn, % Defs[4] Qn
-            GuiControl, Main:, Sum, % Defs[4] * SubStr(Qn, InStr(Qn, "x") + 1)
+            Value_Qn := StrSplit(Qn, "x")
+            GuiControl, Main:, Qn, % Defs[4] "x" Value_Qn[2]
+            GuiControl, Main:, Sum, % Defs[4] * Value_Qn[2]
             Break
         }
     }
@@ -532,9 +522,9 @@ Return
 
 AnalyzeQn:
     Gui, Main:Submit, NoHide
-    Value := SubStr(Qn, 1, InStr(Qn, "x") - 1), Qn := SubStr(Qn, InStr(Qn, "x") + 1)
-    If (Value) && (Qn)
-        GuiControl, Main:, Sum, % Value * Qn
+    Value_Qn := StrSplit(Qn, "x")
+    If (Value_Qn[1]) && (Value_Qn[2])
+        GuiControl, Main:, Sum, % Value_Qn[1] * Value_Qn[2]
 Return
 
 QuitMain:
@@ -551,13 +541,38 @@ ExitApp
 LoadDefined() {
     Data := DB_Read("Sets\PD.db")
     Data := SubStr(Data, 2, StrLen(Data) - 2)
-    Gui, Main:Default
+    
     LV_Delete()
-    Loop, Parse, % Data, ][
+    Loop, Parse, % Data, |
     {
         Defs := StrSplit(A_LoopField, ";")
         If (Defs.MaxIndex() = 4)
             LV_Add("", Defs[1], Defs[2], Defs[3], Defs[4])
+    }
+}
+
+LoadStockList() {
+    LV_Delete()
+    If !FileExist("Stoc\Stc.db") {
+        Data := DB_Read("Sets\PD.db")
+        Data := SubStr(Data, 2, StrLen(Data) - 2) "."
+        
+        genData := ""
+        Loop, Parse, Data, |
+        {
+            Defs := StrSplit(A_LoopField, ";")
+            LV_Add("", Defs[1], Defs[2], 0)
+            genData .=  Defs[1] ";" Defs[2] ";0|"
+        }
+        DB_Write("Stoc\Stc.db", Trim(genData, "|"))
+    } Else {
+        Data := DB_Read("Stoc\Stc.db")
+        Data := SubStr(Data, 2, StrLen(Data) - 2)
+        Loop, Parse, Data, |
+        {
+            Defs := StrSplit(A_LoopField, ";")
+            LV_Add("", Defs[1], Defs[2], 0)
+        }
     }
 }
 
@@ -619,7 +634,7 @@ ShakeControl(GUINm, ControlID) {
 }
 
 CalculateSum() {
-    Gui, Main:Default
+    
     Sum := 0
     FormatTime, OutTime, % A_Now, yyyy/MM/dd HH:mm:ss
     Data := OutTime "> "
@@ -631,10 +646,10 @@ CalculateSum() {
         LV_GetText(Nm, A_Index, 2)
         LV_GetText(Qn, A_Index, 3)
 
-        Data .= "[" Bc ";" Nm ";" Qn ";" ThisSum "]"
+        Data .= Bc ";" Nm ";" Qn ";" ThisSum "|"
     }
     Data .= "> " Sum
-Return, [Sum, Data, OutTime]
+Return, [Sum, Trim(Data, "|"), OutTime]
 }
 
 DB_Write(FileName, Info) {
@@ -673,4 +688,19 @@ DB_Read(FileName) {
     } Until (ThisChar = "")
 
 Return, Decode(Info)
+}
+
+Hide(ListCtrl) {
+    Loop, Parse, ListCtrl, `,
+    {
+        GuiControl, Main:Hide, % A_LoopField
+    }
+}
+
+Show(ListCtrl) {
+    Loop, Parse, ListCtrl, `,
+    {
+        If !InStr(A_LoopField, "$")
+            GuiControl, Main:Show, % A_LoopField
+    }
 }
