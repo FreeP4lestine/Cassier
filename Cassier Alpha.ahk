@@ -34,13 +34,22 @@ EBTN := [[0, 0xC6E6C6, , , 0, , 0x5CB85C, 1]
 
 Gui, Main:-Caption +HwndMain
 Gui, Main:Add, Picture, x0 y0 w1000 h500, Img\bg.png
-
 Gui, Main:Font, s10 Bold, Calibri
 Gui, Main:Add, Button, xm+865 ym+465 w100 h20 HwndBtn gQuit, % _3
 ImageButton.Create(Btn, RedBTN*)
 
-Gui, Main:Font, s13
+If !CheckLicense() {
+    Gui, Main:Add, Picture, x0 y10 vLicPic, Img\Lic.png
+    Gui, Main:Add, Edit, xm+205 ym+135 w760 vEPassString Center
+    Gui, Main:Add, Text, xm+205 ym+165 w760 vPassString Center BackgroundTrans, Please enter the KeyString
+    RMS := "#0"
+    Gui, Main:Show, w1000 h500
+    Return
+}
 
+OpenApp:
+
+Gui, Main:Font, s13
 Gui, Main:Add, Button, x0 y10 HwndBtn w199 h40 gOpenMain Disabled vBtn1, % _4
 ImageButton.Create(Btn, LMBTN*)
 
@@ -62,7 +71,7 @@ MainCtrlList := "Bc,Qn,Nm,Sum,LV0,$GivenMoney,$AllSum,$Change"
 Gui, Main:Font, s25
 Gui, Main:Add, Edit, xm+460 ym+10 w250 vBc Center -E0x200 gAnalyzeAvail Border HwndBc_
 CtlColors.Attach(Bc, "FFFFFF", "008000")
-Gui, Main:Add, Edit, xm+460 ym+70 w250 vQn Center -E0x200 ReadOnly HwndQn gAnalyzeQn, x1
+Gui, Main:Add, Edit, xm+455 ym+70 w260 vQn Center -E0x200 ReadOnly HwndQn gAnalyzeQn, x1
 CtlColors.Attach(Qn, "E6E6E6", "008000")
 Gui, Main:Add, Edit, xm+205 ym+70 w250 vNm -E0x200 ReadOnly HwndNm Center
 CtlColors.Attach(Nm, "E6E6E6", "000080")
@@ -75,7 +84,7 @@ CtlColors.Attach(AS, "E6E6E6", "008000")
 Gui, Main:Add, Edit, xm+713 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
 CtlColors.Attach(C, "E6E6E6", "FF0000")
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0 BackgroundE6E6E6, Barcode|Name|Quantity|Price
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0 BackgroundFFFFFF, Barcode|Name|Quantity|Price
 
 Gui, Main:Default
 Gui, Main:ListView, LV0
@@ -91,7 +100,7 @@ Gui, Main:Font, s25
 Gui, Main:Add, Button, xm+205 ym+30 vEnsBtn w760 h80 hwndBtn Hidden, % _9
 ImageButton.Create(Btn, EBTN*)
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV1 BackgroundE6E6E6 Hidden, Barcode|Name|Quantity|Price
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV1 BackgroundE6E6E6 Hidden, Barcode|Name|Quantity|Price
 
 Gui, Main:Default
 Gui, Main:ListView, LV1
@@ -112,7 +121,7 @@ CtlColors.Attach(Dbp_, "FFFFFF", "000000")
 Gui, Main:Add, Edit, xm+780 ym+80 w185 Center Border vDsp HwndDsp_ -E0x200 gClearDsp Hidden
 CtlColors.Attach(Dsp_, "FFFFFF", "000000")
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV2 BackgroundE6E6E6 c0x800000 Hidden, Barcode|Name|Quantity|Price
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV2 BackgroundE6E6E6 c0x800000 Hidden, Barcode|Name|Quantity|Price
 
 Gui, Main:Default
 Gui, Main:ListView, LV2
@@ -130,7 +139,7 @@ CtlColors.Attach(Pnm_, "E6E6E6", "000000")
 Gui, Main:Add, Edit, xm+585 ym+50 w380 Left vPqn HwndPqn_ -E0x200 Hidden
 CtlColors.Attach(Pqn_, "E6E6E6", "0000FF")
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+145 w760 r11 -Hdr Grid vLV3 BackgroundE6E6E6 c0x800000 gDisplayQn Hidden, Barcode|Name|Quantity
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV3 BackgroundE6E6E6 c0x800000 gDisplayQn Hidden, Barcode|Name|Quantity
 
 Gui, Main:Default
 Gui, Main:ListView, LV3
@@ -138,19 +147,14 @@ LV_ModifyCol(1, "0 Center")
 LV_ModifyCol(2, "377 Right")
 LV_ModifyCol(3, "380 Left")
 
-Gui, Main:Show, w1000 h500
 Gui, Main:Default
 Gui, Main:ListView, LV0
+Gui, Main:Show, w1000 h500
 Return
 
-:*C:GenUMIDForThisUser::
-    If FileExist("Privat\Setting") {
-        Msgbox, 64, Defined, Defined log in setting!
-        Return
-    }
-    FileAppend, % Encode(UUID()), Privat\Setting
-    GuiControl, Verif:Show, Enter
-    GuiControl, Verif:Hide, Pa
+:*C:LetAppRunOnThisMachine::
+    ADMUsername := ADMPassword := ""
+    GuiControl, Main:, PassString, Create ADM username
 Return
 
 OpenMain:
@@ -292,7 +296,31 @@ Enter::
     Gui, Main:Submit, NoHide
     Gui, Main:Default
 
-    If (RMS = "#1") {
+    If (RMS = "#0") {
+        If (EPassString) && (!ADMUsername) {
+            ADMUsername := EPassString
+            EPassString := ""
+            GuiControl, Main:, PassString, Create ADM password
+            GuiControl, Main:, EPassString
+        }
+        If (EPassString) && (!ADMPassword) {
+            ADMPassword := EPassString
+
+            If !FileExist("Sets\Lc.lic")
+                DB_Write("Sets\Lc.lic", UUID() ";" ADMUsername ";" ADMPassword)
+            Else {
+                LC := DB_Read("Sets\Lc.lic")
+                LC := StrSplit(LC, ";")
+                If (Encode(UUID()) != LC[1])
+                    DB_Write("Sets\Lc.lic", UUID() ";" ADMUsername ";" ADMPassword)
+            }
+
+            GuiControl, Main:Hide, LicPic
+            GuiControl, Main:Hide, EPassString
+            GuiControl, Main:Hide, PassString
+            GoSub, OpenApp
+        }
+    } Else If (RMS = "#1") {
         GuiControlGet, Visi, Main:Visible, Nm
         If (Visi) {
             Filled := (Nm) && (Qn) && (Sum)
@@ -325,8 +353,7 @@ Enter::
             LV_Delete()
             GuiControl, Main:Focus, Bc
         }
-    }
-    If (RMS = "#3") {
+    } Else If (RMS = "#3") {
         Filled := (Dbc) && (Dnm) && (Dbp) && (Dsp)
         Msgbox % Dsp
         If (Filled) {
@@ -362,9 +389,7 @@ Enter::
                 LV_Add("", Dbc, Dnm, Dbp, Dsp)
             }
         }
-    }
-
-    If (RMS = "#4") {
+    } Else If (RMS = "#4") {
         If (Pnm) {
             LV_GetText(BcId, LV_GetNext(), 1)
             LV_GetText(NmId, LV_GetNext(), 2)
@@ -538,7 +563,7 @@ LoadDefined() {
     Loop, Parse, % Data, |
     {
         Defs := StrSplit(A_LoopField, ";")
-        If (Defs.MaxIndex() = 4)
+        If (Defs.MaxIndex() >= 4)
             LV_Add("", Defs[1], Defs[2], Defs[3], Defs[4])
     }
 }
@@ -683,4 +708,15 @@ Show(ListCtrl) {
         If !InStr(A_LoopField, "$")
             GuiControl, Main:Show, % A_LoopField
     }
+}
+
+CheckLicense() {
+    If !FileExist("Sets\Lc.lic")
+        Return, 0
+    LC := DB_Read("Sets\Lc.lic")
+    LC := StrSplit(LC, ";")
+
+    If (UUID() != LC[1])
+        Return, 0
+    Return, 1
 }
