@@ -5,6 +5,7 @@ SetWorkingDir %A_ScriptDir%
 #Include, <Class_CtlColors>
 #Include, <Class_ImageButton>
 #Include, <UseGDIP>
+#Include, <Class_LVColors>
 
 OnMessage(0x201, "WM_LBUTTONDOWN")
 
@@ -84,7 +85,7 @@ CtlColors.Attach(AS, "E6E6E6", "008000")
 Gui, Main:Add, Edit, xm+713 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
 CtlColors.Attach(C, "E6E6E6", "FF0000")
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0 BackgroundFFFFFF, Barcode|Name|Quantity|Price
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0, Barcode|Name|Quantity|Price
 
 Gui, Main:Default
 Gui, Main:ListView, LV0
@@ -94,13 +95,13 @@ LV_ModifyCol(3, "254 Center")
 LV_ModifyCol(4, "252 Center")
 ; ==========================================================================================================
 
-; Ensure Dot
+; Ensure Dot Controls
 EnsureCtrlList := "LV1,EnsBtn"
 Gui, Main:Font, s25
 Gui, Main:Add, Button, xm+205 ym+30 vEnsBtn w760 h80 hwndBtn Hidden, % _9
 ImageButton.Create(Btn, EBTN*)
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV1 BackgroundE6E6E6 Hidden, Barcode|Name|Quantity|Price
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV1 Hidden, Barcode|Name|Quantity|Price
 
 Gui, Main:Default
 Gui, Main:ListView, LV1
@@ -110,7 +111,7 @@ LV_ModifyCol(3, "250 Center")
 LV_ModifyCol(4, "256 Center")
 ; ==========================================================================================================
 
-; Define
+; Define Controls
 DefineCtrlList := "Dbc,Dnm,Dbp,Dsp,LV2"
 Gui, Main:Add, Edit, xm+205 ym+80 w185 Center Border vDbc HwndDbc_ -E0x200 gClearDbc Hidden
 CtlColors.Attach(Dbc_, "FFFFFF", "000000")
@@ -121,7 +122,7 @@ CtlColors.Attach(Dbp_, "FFFFFF", "000000")
 Gui, Main:Add, Edit, xm+780 ym+80 w185 Center Border vDsp HwndDsp_ -E0x200 gClearDsp Hidden
 CtlColors.Attach(Dsp_, "FFFFFF", "000000")
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV2 BackgroundE6E6E6 c0x800000 Hidden, Barcode|Name|Quantity|Price
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV2 c0x0000FF Hidden, Barcode|Name|Quantity|Price
 
 Gui, Main:Default
 Gui, Main:ListView, LV2
@@ -131,7 +132,7 @@ LV_ModifyCol(3, "192 Center")
 LV_ModifyCol(4, "186 Center")
 ; ==========================================================================================================
 
-; StockPile
+; StockPile Controls
 StockPileCtrlList := "Pnm,Pqn,LV3"
 Gui, Main:Font, s25
 Gui, Main:Add, Edit, xm+205 ym+50 w380 Right ReadOnly vPnm HwndPnm_ -E0x200 Hidden
@@ -139,17 +140,43 @@ CtlColors.Attach(Pnm_, "E6E6E6", "000000")
 Gui, Main:Add, Edit, xm+585 ym+50 w380 Left vPqn HwndPqn_ -E0x200 Hidden
 CtlColors.Attach(Pqn_, "E6E6E6", "0000FF")
 Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV3 BackgroundE6E6E6 c0x800000 gDisplayQn Hidden, Barcode|Name|Quantity
+Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV3 c0xFF0000 gDisplayQn Hidden, Barcode|Name|Quantity
 
 Gui, Main:Default
 Gui, Main:ListView, LV3
 LV_ModifyCol(1, "0 Center")
 LV_ModifyCol(2, "377 Right")
 LV_ModifyCol(3, "380 Left")
+; ==========================================================================================================
+
+; Profit Controls
+ProfitCtrlList := "LV4,LV5,Slider,OAProfit"
+Gui, Main:Font, s15
+
+;Gui, Main:Add, Edit, xm+205 ym+20 -E0x200 ReadOnly vTint Hidden w760 Center, Day
+Gui, Main:Add, Slider, xm+205 ym+40 Vertical Range1-5 h375 vSlider TickInterval Hidden, 2
+
+Gui, Main:Add, ListView, xm+280 ym+40 w650 r3 vLV5 Hidden -Hdr, PN|Bp|Sp|Proff
+
+Gui, Main:ListView, LV5
+LV_ModifyCol(1, "160 Center")
+LV_ModifyCol(2, "160 Center")
+LV_ModifyCol(3, "160 Center")
+LV_ModifyCol(4, "166 Center")
+
+Gui, Main:Add, ListView, xm+280 ym+135 w650 r9 -Hdr Grid vLV4 c0x008000 gDisplayQn Hidden, Date|Sell Str
+Gui, Main:Add, Edit, xm+606 ym+400 -E0x200 ReadOnly vOAProfit w323 Hidden Center cRed
+
+Gui, Main:Default
+Gui, Main:ListView, LV4
+LV_ModifyCol(1, "323 Center")
+LV_ModifyCol(2, "323 Center")
+; ==========================================================================================================
 
 Gui, Main:Default
 Gui, Main:ListView, LV0
 Gui, Main:Show, w1000 h500
+ProductBase := DB_Read("Sets\PD.db")
 Return
 
 :*C:LetAppRunOnThisMachine::
@@ -207,6 +234,7 @@ Prof:
     Show(ProfitCtrlList)
     RMS := "#5"
     Gui, Main:ListView, LV4
+    LoadProf()
 Return
 
 Enter:
@@ -355,7 +383,6 @@ Enter::
         }
     } Else If (RMS = "#3") {
         Filled := (Dbc) && (Dnm) && (Dbp) && (Dsp)
-        Msgbox % Dsp
         If (Filled) {
             If Dbc is not Digit 
             {
@@ -402,10 +429,11 @@ Enter::
                     Defs := StrSplit(A_LoopField, ";")
                     If !(Defs[5])
                         Defs[5] := 0
-                    If (Pqn > Defs[5])
+                    If (Pqn > Defs[5]) {
                         NewData := StrReplace(NewData, A_LoopField, Defs[1] ";" Defs[2] ";" Defs[3] ";" Defs[4] ";" Pqn)
-                    DB_Write("Sets\PD.db", NewData)
-                    LV_Modify(Row,,,, Pqn)
+                        DB_Write("Sets\PD.db", NewData)
+                        LV_Modify(Row,,,, Pqn)
+                    }
                     Break
                 }
             }
@@ -439,30 +467,9 @@ Return
 
 #If WinActive("ahk_id " Main)
 Delete::
-    If WinActive("ahk_id " Define) {
-        Gui, Def:Default
-        SettingObj := FileOpen("Privat\Setting1.db", "r")
-
-        LV_GetText(Bc, Row := LV_GetNext(), 1)
-        LV_GetText(Nm, Row, 2)
-        LV_GetText(BP, Row, 3)
-        LV_GetText(Sp, Row, 4)
-
-        GetData := ""
-        While !SettingObj.AtEOF() {
-            GetData .= Chr(SettingObj.ReadUChar())
-        }
-        SettingObj.Close()
-
-        SettingObj := FileOpen("Privat\Setting1.db", "w")
-        Loop, Parse, % StrReplace(GetData, Encode("[" Bc ";" Nm ";" BP ";" Sp "]"))
-            SettingObj.WriteUChar(Asc(A_LoopField))
-        SettingObj.Close()
-
-        LV_Delete(LV_GetNext())
-    }
-    If WinActive("ahk_id " Sell) {
-        
+    Gui, Main:Default
+    Gui, Main:Submit, NoHide
+    If (RMS = "#1") {
         LV_Delete(LV_GetNext())
     }
 Return
@@ -510,7 +517,9 @@ AnalyzeAvail:
 
     GuiControl, Main:, Nm
     GuiControl, Main:, Sum
-    GuiControl, Main:, Qn, x1
+    Value_Qn := StrSplit(Qn, "x")
+
+    GuiControl, Main:, Qn, % "x" Value_Qn[2]
 
     CtlColors.Change(Bc_, "FFFFFF", "008000")
     If (Bc) {
@@ -527,12 +536,12 @@ AnalyzeAvail:
         {
             If (SubStr(A_LoopField, 1, InStr(A_LoopField, ";")) = Bc ";") {
                 Defs := StrSplit(A_LoopField, ";")
-            GuiControl, Main:, Nm, % Defs[2]
-            Value_Qn := StrSplit(Qn, "x")
-            GuiControl, Main:, Qn, % Defs[4] "x" Value_Qn[2]
-            GuiControl, Main:, Sum, % Defs[4] * Value_Qn[2]
-            Break
-        }
+                GuiControl, Main:, Nm, % Defs[2]
+                Value_Qn := StrSplit(Qn, "x")
+                GuiControl, Main:, Qn, % Defs[4] "x" Value_Qn[2]
+                GuiControl, Main:, Sum, % Defs[4] * Value_Qn[2]
+                Break
+            }
     }
 }
 Return
@@ -556,9 +565,52 @@ MainGuiClose:
 Quit:
 ExitApp
 
+GetBuyPriceByID(Data, TID) {
+    Loop, Parse, Data, |
+    {
+        If (SubStr(A_LoopField, 1, InStr(A_LoopField, ";") - 1) = TID) {
+            Return, StrSplit(A_LoopField, ";")[3]
+        }
+    }
+    Return, 0
+}
+
+CalcProfit(PData) {
+    TrArr := StrSplit(PData, "> ")
+
+    ;Loop, Parse, % Trim(TrArr[2], "|"), |
+    ;{
+    ;    Items := StrSplit(A_LoopField, ";")
+    ;    Qn := SubStr(Items[3], InStr(Items[3], "x") + 1)
+    ;    ThisCost := GetBuyPriceByID(BaseDef, Items[1]) * Qn
+    ;}
+    TimeDT := TrArr[1]
+    RArr := StrSplit(TrArr[3], ";")
+    Return, [TimeDT,  RArr[1] " - " RArr[2] " = " RArr[3], RArr[3]]
+}
+
+LoadProf() {
+    LV_Delete()
+    LoadedBase := DB_Read("Sets\PD.db")
+    OAPr := 0
+    Loop, Files, Valid\*.db 
+    {
+        Arr := CalcProfit(DB_Read(A_LoopFileFullPath))
+        LV_Add("", Arr[1], Arr[2])
+        OAPr += Arr[3]
+    }
+
+    Loop, Files, Curr\*.db 
+    {
+        Arr := CalcProfit(DB_Read(A_LoopFileFullPath))
+        LV_Add("", Arr[1], Arr[2])
+        OAPr += Arr[3]
+    }
+    GuiControl, Main:, OAProfit, % OAPr
+}
+
 LoadDefined() {
     Data := DB_Read("Sets\PD.db")
-    
     LV_Delete()
     Loop, Parse, % Data, |
     {
@@ -640,22 +692,30 @@ ShakeControl(GUINm, ControlID) {
 }
 
 CalculateSum() {
-    Sum := 0
+    global
+    Cost := Sum := 0
     FormatTime, OutTime, % A_Now, yyyy/MM/dd HH:mm:ss
     Data := OutTime "> "
     Loop, % LV_GetCount() {
         LV_GetText(ThisSum, A_Index, 4)
         Sum += ThisSum
-
+        
         LV_GetText(Bc, A_Index, 1)
         LV_GetText(Nm, A_Index, 2)
         LV_GetText(Qn, A_Index, 3)
 
-        Data .= Bc ";" Nm ";" Qn ";" ThisSum "|"
+        BP := GetBuyPriceByID(ProductBase, Bc)
+        Qn_ := SubStr(Qn, InStr(Qn, "x") + 1)
+        ThisCost := BP * Qn_
+        Cost += ThisCost
+
+        Data .= Bc ";" Nm ";" Qn ";" ThisSum ";" BP "x" Qn_ ";" ThisCost ";" ThisSum - ThisCost "|"
     }
-    Data .= "> " Sum
+    Data .= "> " Sum ";" Cost ";" Sum - Cost
 Return, [Sum, Trim(Data, "|"), OutTime]
 }
+
+;2021/12/30 21:56:19> 5;7ajaO5ra;2000x3;6000;1000x3;3000;3000|3;Gaucho;400x5;2000;250x5;1250;750|1;Ticket;1250x2;2500;1000x2;2000;500|10;Ehhaa;400x5;2000;200x5;1000;1000|> 12500;7250;5250
 
 DB_Write(FileName, Info) {
     DBObj := FileOpen(FileName, "w")
