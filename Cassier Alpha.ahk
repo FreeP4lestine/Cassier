@@ -21,24 +21,26 @@ RedBTN := [[0, 0xFFFFFF, , 0xFF0000, 0, , 0xD43F3A, 1]
 , [0, 0xFF0000, , 0xFFFF00, 0, , 0xD43F3A, 1]
 , [0, 0x6C7174, , 0x000000, 0, , 0xFFFFFF, 1]]
 
-LMBTN := [[0, 0xCCCCCC, , 0x000000, 0, , 0xFFFFFF, 1]
-, [0, 0x3EB2FD, , 0xFFFFFF, 0, , 0xFFFFFF, 1]
-, [0, 0x3EB2FD, , 0xFF0000, 0, , 0xFFFFFF, 1]
-, [0, 0x3EB2FD, , 0x000000, 0, , 0x3EB2FD, 1]]
+LMBTN := [[0, 0xCCCCCC, , 0x000000, 0, , 0x804000, 4]
+, [0, 0x3EB2FD, , 0xFFFFFF, 0, , 0x804000, 4]
+, [0, 0x3EB2FD, , 0xFF0000, 0, , 0x804000, 4]
+, [0, 0x804000, , 0xFFFFFF, 0, , 0x804000, 4]]
 
-EBTN := [[0, 0xC6E6C6, , , 0, , 0x5CB85C, 1]
-, [0, 0x91CF91, , , 0, , 0x5CB85C, 1]
-, [0, 0x5CB85C, , , 0, , 0x5CB85C, 1]
-, [0, 0xF0F0F0, , , 0, , 0x5CB85C, 1]]
+EBTN := [[0, 0xC6E6C6, , , 0, , 0x5CB85C, 5]
+, [0, 0x91CF91, , , 0, , 0x5CB85C, 5]
+, [0, 0x5CB85C, , , 0, , 0x5CB85C, 5]
+, [0, 0xF0F0F0, , , 0, , 0x5CB85C, 5]]
 
 ;==============================================================================
 
-Gui, Main:-Caption +HwndMain
-Gui, Main:Add, Picture, x0 y0 w1000 h500, Img\bg.png
+Gui, Main:-Caption +HwndMain MinSize1000x500
 Gui, Main:Font, s10 Bold, Calibri
-Gui, Main:Add, Button, xm+865 ym+465 w100 h20 HwndBtn gQuit, % _3
-ImageButton.Create(Btn, RedBTN*)
-Gui, Main:Add, Text, xm+75 ym+446 w50 BackgroundTrans c800000, % "v" Version()
+Gui, Main:Color, 0xB2DBC9
+LoadBackground()
+
+;Gui, Main:Add, Button, xm+865 ym+465 w100 h20 HwndBtn gQuit vQuit, % _3
+;ImageButton.Create(Btn, RedBTN*)
+Gui, Main:Add, Text, xm+75 ym+446 w50 BackgroundTrans c800000 vVer, % "v" Version()
 
 If !CheckLicense() {
     Gui, Main:Add, Picture, x0 y10 vLicPic, Img\Lic.png
@@ -50,7 +52,7 @@ If !CheckLicense() {
 }
 
 OpenApp:
-
+Gui, Main:+Resize
 Gui, Main:Font, s13
 Gui, Main:Add, Button, x0 y10 HwndBtn w199 h40 gOpenMain Disabled vBtn1, % _4
 ImageButton.Create(Btn, LMBTN*)
@@ -80,7 +82,7 @@ CtlColors.Attach(Nm, "E6E6E6", "000080")
 Gui, Main:Add, Edit, xm+715 ym+70 w250 vSum -E0x200 ReadOnly HwndSum Center Hidden
 CtlColors.Attach(Sum, "E6E6E6", "800000")
 Gui, Main:Font, s50
-Gui, Main:Add, Edit, xm+205 ym+10 w254 vGivenMoney -E0x200 cBlue gCalc Center Border Hidden
+Gui, Main:Add, Edit, xm+205 ym+10 w254 vGivenMoney -E0x200 gCalc Center Hidden
 Gui, Main:Add, Edit, xm+459 ym+10 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
 CtlColors.Attach(AS, "E6E6E6", "008000")
 Gui, Main:Add, Edit, xm+713 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
@@ -170,7 +172,9 @@ LV_ModifyCol(4, "189 Center")
 
 Gui, Main:Default
 Gui, Main:ListView, LV0
-Gui, Main:Show, w1000 h500
+
+Gui, Main:Show, % "x" 5 " y" 0 " w" A_ScreenWidth - 20 " h" A_ScreenHeight - 55
+
 ProductBase := DB_Read("Sets\PD.db")
 CheckFoldersSet()
 
@@ -188,6 +192,49 @@ Return
 :*C:LetAppRunOnThisMachine::
     ADMUsername := ADMPassword := ""
     GuiControl, Main:, PassString, Create ADM username
+Return
+
+MainGuiSize:
+    GuiControl, Main:Move, % "Prt1", % "w" A_GuiWidth
+    GuiControl, Main:Move, % "Prt2", % "y" A_GuiHeight - 55 " w" A_GuiWidth - 199
+    GuiControl, Main:Move, % "Prt3", % "y" A_GuiHeight - 55
+    GuiControl, Main:Move, % "Prt4", % "y" A_GuiHeight - 60 " w" A_GuiWidth
+    GuiControl, Main:Move, % "Prt5", % " h" A_GuiHeight - 70
+    Loop, 5 {
+        GuiControl, Main:+Redraw, % "Prt" A_Index
+    }
+
+    GuiControl, Main:Move, % "Ver", % "y" A_GuiHeight - 47
+    GuiControl, Main:+Redraw, % "Ver"
+
+    Third := (A_GuiWidth - 230) // 3
+
+    ; #1
+    GuiControl, Main:Move, % "Bc", % "x" Third + 204 " w" Third
+    GuiControl, Main:Move, % "Nm", % "w" Third - 13
+    GuiControl, Main:Move, % "Qn", % "x" Third + 204 " w" Third
+    GuiControl, Main:Move, % "Sum", % "x" (Third * 2) + 204 " w" Third
+
+    GuiControl, Main:Move, % "LV0", % "w" (Third * 3) - 13 " h" A_GuiHeight - 220
+    Gui, Main:ListView, LV0
+    LV_ModifyCol(2, (Val := Third - 13) " Center")
+    LV_ModifyCol(3, Val + 6 " Center")
+    LV_ModifyCol(4, Val + 14 " Center")
+
+    GuiControl, Main:Move, % "GivenMoney", % "w" Third - 13
+    GuiControl, Main:Move, % "AllSum", % "x" Third + 204 " w" Third
+    GuiControl, Main:Move, % "Change", % "x" (Third * 2) + 204 " w" Third
+
+    ;#2
+    GuiControl, Main:Move, % "EnsBtn", % "w" (Third * 3) - 13
+    GuiControl, Main:, % "EnsBtn", % _9
+    GuiControlGet, Btn, Main:Hwnd, EnsBtn
+    ImageButton.Create(Btn, EBTN*)
+    GuiControl, Main:+Redraw, % "EnsBtn"
+
+    GuiControl, Main:Move, % "LV1", % "w" (Third * 3) - 13 " h" A_GuiHeight - 220
+    Gui, Main:ListView, LV1
+    LV_ModifyCol(1, (Val := Third - 13) * 3 " Center")
 Return
 
 Update:
@@ -210,6 +257,7 @@ OpenMain:
     Show(MainCtrlList)
     RMS := "#1"
     Gui, Main:ListView, LV0
+    WinSet, Redraw
 Return
 
 Submit:
@@ -222,6 +270,7 @@ Submit:
     Gui, Main:ListView, LV1
     GuiControl, Main:Enabled, EnsBtn
     LoadCurrent()
+    WinSet, Redraw
 Return
 
 Define:
@@ -233,6 +282,7 @@ Define:
     Gui, Main:ListView, LV2
     LoadDefined()
     RMS := "#3"
+    WinSet, Redraw
 Return
 
 StockPile:
@@ -244,6 +294,7 @@ StockPile:
     Gui, Main:ListView, LV3
     LoadStockList()
     RMS := "#4"
+    WinSet, Redraw
 Return
 
 Prof:
@@ -255,6 +306,7 @@ Prof:
     RMS := "#5"
     Gui, Main:ListView, LV4
     LoadProf()
+    WinSet, Redraw
 Return
 
 Edit:
@@ -815,21 +867,25 @@ Hide(ListCtrl) {
 }
 
 Show(ListCtrl) {
+    global
+    WinGetPos,,, Width,, % "ahk_id " Main
     Loop, Parse, ListCtrl, `,
     {
         If !InStr(A_LoopField, "$") {
             GuiControlGet, Post, Main:Pos, % A_LoopField
-            GuiControl, Main:Move, % A_LoopField, % "x" PostX + 1000
+            GuiControl, Main:Move, % A_LoopField, % "x" PostX + Width
         }
 
         If !InStr(A_LoopField, "$") {
             GuiControl, Main:Show, % A_LoopField
         }
 
-        Loop, 1000 {
+        LT := Width // 4, J := 4
+
+        Loop, % LT {
             If !InStr(A_LoopField, "$") {
                 GuiControlGet, Post, Main:Pos, % A_LoopField
-                GuiControl, Main:Move, % A_LoopField, % "x" PostX - 1
+                GuiControl, Main:Move, % A_LoopField, % "x" PostX - J
             }
         }
     }
@@ -853,5 +909,19 @@ CheckFoldersSet() {
         If !InStr(FileExist(A_LoopField), "D") {
             FileCreateDir, % A_LoopField
         }
+    }
+}
+
+LoadBackground() {
+    global
+    Loop, Files, % "Img\Prt*.png"
+    {
+        Name := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 4)
+        Set := StrSplit(Name, "_")
+
+        PosArr := StrSplit(Set[2], "x")
+        DemArr := StrSplit(Set[3], "x")
+
+        Gui, Main:Add, Picture, % "x" PosArr[1] " y" PosArr[2] " w" DemArr[1] " h" DemArr[2] " v" Set[1], % "Img\" A_LoopFileName
     }
 }
