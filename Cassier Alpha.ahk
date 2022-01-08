@@ -21,10 +21,10 @@ RedBTN := [[0, 0xFFFFFF, , 0xFF0000, 0, , 0xD43F3A, 1]
 , [0, 0xFF0000, , 0xFFFF00, 0, , 0xD43F3A, 1]
 , [0, 0x6C7174, , 0x000000, 0, , 0xFFFFFF, 1]]
 
-LMBTN := [[0, 0xCCCCCC, , 0x000000, 0, , 0x804000, 4]
-, [0, 0x3EB2FD, , 0xFFFFFF, 0, , 0x804000, 4]
-, [0, 0x3EB2FD, , 0xFF0000, 0, , 0x804000, 4]
-, [0, 0x804000, , 0xFFFFFF, 0, , 0x804000, 4]]
+LMBTN := [[0, 0xCCCCCC, , 0x000000, 0, , 0x804000, 2]
+, [0, 0x3EB2FD, , 0xFFFFFF, 0, , 0x804000, 2]
+, [0, 0x3EB2FD, , 0xFF0000, 0, , 0x804000, 2]
+, [0, 0x804000, , 0xFFFFFF, 0, , 0x804000, 2]]
 
 EBTN := [[0, 0xC6E6C6, , , 0, , 0x5CB85C, 5]
 , [0, 0x91CF91, , , 0, , 0x5CB85C, 5]
@@ -38,8 +38,9 @@ Gui, Main:Font, s10 Bold, Calibri
 Gui, Main:Color, 0xB2DBC9
 LoadBackground()
 
-;Gui, Main:Add, Button, xm+865 ym+465 w100 h20 HwndBtn gQuit vQuit, % _3
-;ImageButton.Create(Btn, RedBTN*)
+Gui, Main:Add, Text, x0 y0 w1000 h10 HwndTopText vTText
+CtlColors.Attach(TopText, "80FF80", "000000")
+
 Gui, Main:Add, Text, xm+75 ym+446 w50 BackgroundTrans c800000 vVer, % "v" Version()
 
 If !CheckLicense() {
@@ -69,10 +70,21 @@ ImageButton.Create(Btn, LMBTN*)
 Gui, Main:Add, Button, x0 y50 HwndBtn w199 h40 gSubmit vBtn5, % _8
 ImageButton.Create(Btn, LMBTN*)
 
+
+Gui, Main:Font, s25, Consolas
+Gui, Main:Add, Edit, xm y500 HwndE w175 vItemsSold -E0x200 ReadOnly Center Border, 0
+CtlColors.Attach(E, "B2DBC9", "0000FF")
+
+Gui, Main:Add, Edit, xm y528 HwndE w175 vSoldP -E0x200 ReadOnly Center Border, 0
+CtlColors.Attach(E, "B2DBC9", "000000")
+
+Gui, Main:Add, Edit, xm y556 HwndE w175 vProfitP -E0x200 ReadOnly Center Border, 0
+CtlColors.Attach(E, "B2DBC9", "FF0000")
+
 ; Main Controls
 RMS := "#1"
 MainCtrlList := "Bc,Nm,Qn,Sum,LV0,$GivenMoney,$AllSum,$Change"
-Gui, Main:Font, s25
+Gui, Main:Font, s25, Calibri
 Gui, Main:Add, Edit, xm+460 ym+10 w250 vBc Center -E0x200 gAnalyzeAvail Border HwndBc_ Hidden
 CtlColors.Attach(Bc, "FFFFFF", "008000")
 Gui, Main:Add, Edit, xm+455 ym+70 w260 vQn Center -E0x200 ReadOnly HwndQn gAnalyzeQn Hidden, x1
@@ -83,9 +95,9 @@ Gui, Main:Add, Edit, xm+715 ym+70 w250 vSum -E0x200 ReadOnly HwndSum Center Hidd
 CtlColors.Attach(Sum, "E6E6E6", "800000")
 Gui, Main:Font, s50
 Gui, Main:Add, Edit, xm+205 ym+10 w254 vGivenMoney -E0x200 gCalc Center Hidden
-Gui, Main:Add, Edit, xm+459 ym+10 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
+Gui, Main:Add, Edit, xm+460 ym+10 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
 CtlColors.Attach(AS, "E6E6E6", "008000")
-Gui, Main:Add, Edit, xm+713 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
+Gui, Main:Add, Edit, xm+715 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
 CtlColors.Attach(C, "E6E6E6", "FF0000")
 Gui, Main:Font, s15
 Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0 Hidden, Barcode|Name|Quantity|Price
@@ -99,7 +111,7 @@ LV_ModifyCol(4, "252 Center")
 ; ==========================================================================================================
 
 ; Ensure Dot Controls
-EnsureCtrlList := "LV1,EnsBtn"
+EnsureCtrlList := "LV1,EnsBtn,Sold,Bought,ProfitEq"
 Gui, Main:Font, s25
 Gui, Main:Add, Button, xm+205 ym+30 vEnsBtn w760 h80 hwndBtn Hidden gValid, % _9
 ImageButton.Create(Btn, EBTN*)
@@ -109,9 +121,19 @@ Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV1 Hidden, SO
 Gui, Main:Default
 Gui, Main:ListView, LV1
 LV_ModifyCol(1, "w760 Center")
+
+Gui, Main:Font, s40
+Gui, Main:Add, Edit, xm+206 ym+430 w260 vSold Center -E0x200 ReadOnly HwndE gAnalyzeQn Hidden
+CtlColors.Attach(E, "FFFFFF", "FF0000")
+Gui, Main:Add, Edit, xm+456 ym+430 w260 vBought -E0x200 ReadOnly HwndE Center Hidden
+CtlColors.Attach(E, "FFFFFF", "000000")
+Gui, Main:Add, Edit, xm+716 ym+430 w260 vProfitEq -E0x200 ReadOnly HwndE Center Hidden
+CtlColors.Attach(E, "FFFFFF", "008000")
+
 ; ==========================================================================================================
 
 ; Define Controls
+Gui, Main:Font, s15
 DefineCtrlList := "Dbc,Dnm,Dbp,Dsp,LV2"
 Gui, Main:Add, Edit, xm+205 ym+80 w185 Center Border vDbc HwndDbc_ -E0x200 gClearDbc Hidden
 CtlColors.Attach(Dbc_, "FFFFFF", "000000")
@@ -186,6 +208,8 @@ Show(MainCtrlList)
 RMS := "#1"
 Gui, Main:ListView, LV0
 
+LastMDate := ""
+Table := ["A", "B", "C", "D", "E", "F"]
 SetTimer, Update, 250
 Return
 
@@ -195,49 +219,123 @@ Return
 Return
 
 MainGuiSize:
-    GuiControl, Main:Move, % "Prt1", % "w" A_GuiWidth
-    GuiControl, Main:Move, % "Prt2", % "y" A_GuiHeight - 55 " w" A_GuiWidth - 199
-    GuiControl, Main:Move, % "Prt3", % "y" A_GuiHeight - 55
-    GuiControl, Main:Move, % "Prt4", % "y" A_GuiHeight - 60 " w" A_GuiWidth
-    GuiControl, Main:Move, % "Prt5", % " h" A_GuiHeight - 70
-    Loop, 5 {
+    WinGetPos,,, Width, Height, % "ahk_id " Main
+    Height -= 10
+    GuiControl, Main:Move, % "TText", % "w" Width
+    GuiControl, Main:Move, % "Prt1", % "y" Height - 55 " w" Width - 199
+    GuiControl, Main:Move, % "Prt2", % "y" Height - 55
+    GuiControl, Main:Move, % "Prt3", % "y" Height - 60 " w" Width
+    GuiControl, Main:Move, % "Prt4", % " h" Height - 70
+    Loop, 4 {
         GuiControl, Main:+Redraw, % "Prt" A_Index
     }
 
-    GuiControl, Main:Move, % "Ver", % "y" A_GuiHeight - 47
+    Width -= 30
+    GuiControl, Main:Move, % "Ver", % "y" Height - 47
     GuiControl, Main:+Redraw, % "Ver"
 
-    Third := (A_GuiWidth - 230) // 3
+    InitY := 126
+    GuiControl, Main:Move, % "ItemsSold", % "y" Height - InitY - (50 * 2)
+    GuiControl, Main:Move, % "SoldP", % "y" Height - InitY - 50
+    GuiControl, Main:Move, % "ProfitP", % "y" Height - InitY
+    GuiControl, Main:+Redraw, % "ItemsSold"
+    GuiControl, Main:+Redraw, % "SoldP"
+    GuiControl, Main:+Redraw, % "ProfitP"
 
+    Third := (Width - 217) // 3
+
+    If (RMS = "#1") {
     ; #1
-    GuiControl, Main:Move, % "Bc", % "x" Third + 204 " w" Third
-    GuiControl, Main:Move, % "Nm", % "w" Third - 13
-    GuiControl, Main:Move, % "Qn", % "x" Third + 204 " w" Third
-    GuiControl, Main:Move, % "Sum", % "x" (Third * 2) + 204 " w" Third
+        GuiControl, Main:Move, % "Bc", % "x" Third + 217 " w" Third
+        GuiControl, Main:Move, % "Nm", % "w" Third
+        GuiControl, Main:Move, % "Qn", % "x" Third + 217 " w" Third
+        GuiControl, Main:Move, % "Sum", % "x" (Third * 2) + 217 " w" Third
 
-    GuiControl, Main:Move, % "LV0", % "w" (Third * 3) - 13 " h" A_GuiHeight - 220
-    Gui, Main:ListView, LV0
-    LV_ModifyCol(2, (Val := Third - 13) " Center")
-    LV_ModifyCol(3, Val + 6 " Center")
-    LV_ModifyCol(4, Val + 14 " Center")
+        GuiControl, Main:Move, % "LV0", % "w" (Third * 3) " h" Height - 220
+        Gui, Main:ListView, LV0
+        LV_ModifyCol(2, (Val := Third) - 1)
+        LV_ModifyCol(3, Val - 2)
+        LV_ModifyCol(4, Val - 1)
 
-    GuiControl, Main:Move, % "GivenMoney", % "w" Third - 13
-    GuiControl, Main:Move, % "AllSum", % "x" Third + 204 " w" Third
-    GuiControl, Main:Move, % "Change", % "x" (Third * 2) + 204 " w" Third
+        GuiControl, Main:Move, % "GivenMoney", % "w" Third
+        GuiControl, Main:Move, % "AllSum", % "x" Third + 217 " w" Third
+        GuiControl, Main:Move, % "Change", % "x" (Third * 2) + 217 " w" Third
+    } Else If (RMS = "#2") {
+    ; #2
+        GuiControl, Main:Move, % "EnsBtn", % "w" (Third * 3)
+        GuiControl, Main:, % "EnsBtn", % _9
+        GuiControlGet, Btn, Main:Hwnd, EnsBtn
+        ImageButton.Create(Btn, EBTN*)
+        GuiControl, Main:+Redraw, % "EnsBtn"
+        GuiControl, Main:Move, % "LV1", % "w" (Third * 3) " h" Height - 300
+        Gui, Main:ListView, LV1
+        LV_ModifyCol(1, (Third * 3) - 5)
 
-    ;#2
-    GuiControl, Main:Move, % "EnsBtn", % "w" (Third * 3) - 13
-    GuiControl, Main:, % "EnsBtn", % _9
-    GuiControlGet, Btn, Main:Hwnd, EnsBtn
-    ImageButton.Create(Btn, EBTN*)
-    GuiControl, Main:+Redraw, % "EnsBtn"
+        GuiControl, Main:Move, % "Sold", % "y" Height - 150 " w" Third
+        GuiControl, Main:Move, % "Bought", % "x" Third + 217 " y" Height - 150 " w" Third
+        GuiControl, Main:Move, % "ProfitEq", % "x" (Third * 2) + 217 " y" Height - 150 " w" Third
 
-    GuiControl, Main:Move, % "LV1", % "w" (Third * 3) - 13 " h" A_GuiHeight - 220
-    Gui, Main:ListView, LV1
-    LV_ModifyCol(1, (Val := Third - 13) * 3 " Center")
+    } Else If (RMS = "#3") {
+    ; #3
+        Quarter := (Width - 217) // 4
+        GuiControl, Main:Move, % "Dbc", % "w" Quarter
+        GuiControl, Main:Move, % "Dnm", % "x" Quarter + 217 " w" Quarter
+        GuiControl, Main:Move, % "Dbp", % "x" (Quarter * 2) + 217 " w" Quarter
+        GuiControl, Main:Move, % "Dsp", % "x" (Quarter * 3) + 217 " w" Quarter
+
+        GuiControl, Main:Move, % "LV2", % "w" (Quarter * 4) " h" Height - 220
+        Gui, Main:ListView, LV2
+        LV_ModifyCol(1, (Val := Quarter) - 2)
+        LV_ModifyCol(2, Val - 1)
+        LV_ModifyCol(3, Val)
+        LV_ModifyCol(4, Val - 1)
+    } Else If (RMS = "#4") {
+    ; #4
+        Half := (Width - 217) // 2
+        GuiControl, Main:Move, % "Pnm", % "w" Half
+        GuiControl, Main:Move, % "Pqn", % "x" Half + 217 " w" Half
+        GuiControl, Main:Move, % "LV3", % "w" (Half * 2) " h" Height - 220
+
+        Gui, Main:ListView, LV3
+        LV_ModifyCol(2, (Val := Half) - 3)
+        LV_ModifyCol(3, Val)
+    } Else If (RMS = "#5") {
+    ; #4
+        Quarter := (Width - 217) // 4
+        ; SPr,CPr,OAProfit
+        GuiControl, Main:Move, % "SPr", % "x" Quarter + 217 " w" Quarter
+        GuiControl, Main:Move, % "CPr", % "x" (Quarter * 2) + 217 " w" Quarter
+        GuiControl, Main:Move, % "OAProfit", % "x" (Quarter * 3) + 217 "w" Quarter
+
+        GuiControl, Main:Move, % "LV4", % "w" (Quarter * 4) " h" Height - 220
+        Gui, Main:ListView, LV4
+        LV_ModifyCol(1, (Val := Quarter) - 3)
+        LV_ModifyCol(2, Val)
+        LV_ModifyCol(3, Val)
+        LV_ModifyCol(4, Val - 1)
+    }
 Return
 
 Update:
+    FileGetTime, ThisMData, Curr, M
+    If (ThisMData != LastMDate) {
+        Nb := SPr := OAPr := 0
+        Loop, Files, Curr\*.db
+        {
+            RD := DB_Read(A_LoopFileFullPath)
+            If (RD) {
+                Arr := CalcProfit(RD)
+                SPr := Arr[2][1] + SPr
+                OAPr := Arr[2][3] + OAPr
+                Nb := Nb + Arr[3]
+            }
+        }
+        GuiControl, Main:, ItemsSold, % Nb
+        GuiControl, Main:, SoldP, % SPr
+        GuiControl, Main:, ProfitP, % OAPr
+        LastMDate := ThisMData
+    }
+
     If (RMS = "#1") {
         GuiControlGet, Visi, Main:Visible, Nm
         If (Visi) {
@@ -247,33 +345,36 @@ Update:
             }
         }
     }
+    ;CtlColors.Change(TopText, RandomHexColor(), "000000")
 Return
 
 OpenMain:
+    RMS := "#1"
+    Gosub, MainGuiSize
     Loop, Parse, % "2435"
         GuiControl, Main:Enabled, Btn%A_LoopField%
     Hide(EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
     GuiControl, Main:Disabled, Btn1
     Show(MainCtrlList)
-    RMS := "#1"
     Gui, Main:ListView, LV0
-    WinSet, Redraw
 Return
 
 Submit:
+    RMS := "#2"
+    Gosub, MainGuiSize
     Loop, Parse, % "1234"
         GuiControl, Main:Enabled, Btn%A_LoopField%
     Hide(MainCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
     GuiControl, Main:Disabled, Btn5
     Show(EnsureCtrlList)
-    RMS := "#2"
     Gui, Main:ListView, LV1
     GuiControl, Main:Enabled, EnsBtn
     LoadCurrent()
-    WinSet, Redraw
 Return
 
 Define:
+    RMS := "#3"
+    Gosub, MainGuiSize
     Loop, Parse, % "1435"
         GuiControl, Main:Enabled, Btn%A_LoopField%
     Hide(MainCtrlList "," EnsureCtrlList "," StockPileCtrlList "," ProfitCtrlList)
@@ -281,11 +382,11 @@ Define:
     Show(DefineCtrlList)
     Gui, Main:ListView, LV2
     LoadDefined()
-    RMS := "#3"
-    WinSet, Redraw
 Return
 
 StockPile:
+    RMS := "#4"
+    Gosub, MainGuiSize
     Loop, Parse, % "1245"
         GuiControl, Main:Enabled, Btn%A_LoopField%
     Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," ProfitCtrlList)
@@ -293,20 +394,18 @@ StockPile:
     Show(StockPileCtrlList)
     Gui, Main:ListView, LV3
     LoadStockList()
-    RMS := "#4"
-    WinSet, Redraw
 Return
 
 Prof:
+    RMS := "#5"
+    Gosub, MainGuiSize
     Loop, Parse, % "1235" 
         GuiControl, Main:Enabled, Btn%A_LoopField%
     Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList)
     GuiControl, Main:Disabled, Btn4
     Show(ProfitCtrlList)
-    RMS := "#5"
     Gui, Main:ListView, LV4
     LoadProf()
-    WinSet, Redraw
 Return
 
 Edit:
@@ -339,8 +438,12 @@ Return
 Valid:
     FileCreateDir, % "Valid\" Now := A_Now
     FileMove, % "Curr\*.db", % "Valid\" Now
+    Gui, Main:Default
     LV_Delete()
     GuiControl, Main:Disabled, EnsBtn
+    GuiControl, Main:, Sold
+    GuiControl, Main:, Bought
+    GuiControl, Main:, ProfitEq
 Return
 
 DisplayQn:
@@ -425,6 +528,16 @@ Enter::
             }
         } Else {
             DB_Write("Curr\" A_Now ".db", Sum_Data[2])
+            Arr := StrSplit(Trim(StrSplit(Sum_Data[2], "> ")[2], "|"), "|")
+
+            For Each, SO in Arr {
+
+                ThisArr := StrSplit(SO, ";")
+                ThisBc := ThisArr[1]
+                ThisQn := StrSplit(ThisArr[3], "x")[2]
+                
+                RemoveFromStock(ThisBc, ThisQn)
+            }
 
             GuiControl, Main:, GivenMoney
             GuiControl, Main:, AllSum
@@ -444,9 +557,9 @@ Enter::
             GuiControl, Main:, Qn, x1
             GuiControl, Main:, Sum
 
-            
             LV_Delete()
             GuiControl, Main:Focus, Bc
+
         }
     } Else If (RMS = "#3") {
         Filled := (Dbc) && (Dnm) && (Dbp) && (Dsp)
@@ -529,10 +642,22 @@ Up::
     Gui, Main:Default
 
     If (RMS = "#1") {
-        _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
-        Qn := SubStr(Qn, InStr(Qn, "x") + 1)
-        GuiControl, Main:, Qn, % _Qn "x" Qn += 1
-        Sleep, 125
+        GuiControlGet, Focused, Main:FocusV
+        If (Focused = "LV0") {
+            Row := LV_GetNext()
+            If (Row) {
+                LV_GetText(ThisQn, Row := LV_GetNext(), 3)
+                VQ := StrSplit(ThisQn, "x")
+                LV_Modify(Row,,,, VQ[1] "x" VQ[2] + 1)
+                LV_Modify(Row,,,,, VQ[1] * (VQ[2] + 1))
+                Sleep, 125
+            }
+        } Else {
+            _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
+            Qn := SubStr(Qn, InStr(Qn, "x") + 1)
+            GuiControl, Main:, Qn, % _Qn "x" Qn += 1
+            Sleep, 125
+        }
     } Else {
         SendInput, {Up}
     }
@@ -545,11 +670,25 @@ Down::
     Gui, Main:Default
 
     If (RMS = "#1") {
-        _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
-        Qn := SubStr(Qn, InStr(Qn, "x") + 1)
-        If (Qn > 1)
-            GuiControl, Main:, Qn, % _Qn "x" Qn -= 1
-        Sleep, 125
+        GuiControlGet, Focused, Main:FocusV
+        If (Focused = "LV0") {
+            Row := LV_GetNext()
+            If (Row) {
+                LV_GetText(ThisQn, Row := LV_GetNext(), 3)
+                VQ := StrSplit(ThisQn, "x")
+                If (VQ[2] > 1) {
+                    LV_Modify(Row,,,, VQ[1] "x" VQ[2] - 1)
+                    LV_Modify(Row,,,,, VQ[1] * (VQ[2] - 1))
+                }
+                Sleep, 125
+            }
+        } Else {
+            _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
+            Qn := SubStr(Qn, InStr(Qn, "x") + 1)
+            If (Qn > 1)
+                GuiControl, Main:, Qn, % _Qn "x" Qn -= 1
+            Sleep, 125
+        }
     } Else {
         SendInput, {Down}
     }
@@ -661,6 +800,7 @@ ExitApp
 
 LoadCurrent() {
     LV_Delete()
+    OAPr := 0, SPr := 0, CP := 0
     Loop, Files, Curr\*.db
     {
         RD := DB_Read(A_LoopFileFullPath)
@@ -668,10 +808,18 @@ LoadCurrent() {
             SplitPath, % A_LoopFileName,,,, OutNameNoExt
             FormatTime, ThisTime, % OutNameNoExt, yyyy/MM/dd HH:mm:ss
             LV_Add("", "Sell Operation Was Done At: " ThisTime)
+            Arr := CalcProfit(RD)
+            SPr := Arr[2][1] + SPr
+            CP := Arr[2][2] + CP
+            OAPr := Arr[2][3] + OAPr
         }
     }
     If !LV_GetCount() {
         GuiControl, Main:Disabled, EnsBtn
+    } Else {
+        GuiControl, Main:, ProfitEq, % OAPr
+        GuiControl, Main:, Sold, % SPr
+        GuiControl, Main:, Bought, % CP
     }
 }
 
@@ -689,21 +837,36 @@ CalcProfit(PData) {
     TrArr := StrSplit(PData, "> ")
     TimeDT := TrArr[1]
     RArr := StrSplit(TrArr[3], ";")
-    Return, [TimeDT, [RArr[1], RArr[2], RArr[3]]]
+    Return, [TimeDT, [RArr[1], RArr[2], RArr[3]], StrSplit(StrSplit(TrArr[2], ";")[3], "x")[2]]
 }
+
 
 LoadProf() {
     LV_Delete()
-    LoadedBase := DB_Read("Sets\PD.db")
+    ;LoadedBase := DB_Read("Sets\PD.db")
     OAPr := 0, SPr := 0, CP := 0
+
+    Loop, Files, Valid\*.db, R F
+    {
+        RD := DB_Read(A_LoopFileFullPath)
+        If (RD) {
+            Arr := CalcProfit(RD)
+            LV_Add("", Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
+            SPr := Arr[2][1] + SPr
+            CP := Arr[2][2] + CP
+            OAPr := Arr[2][3] + OAPr
+        }
+    }
+
     Loop, Files, Curr\*.db
     {
-        Arr := CalcProfit(RD := DB_Read(A_LoopFileFullPath))
+        RD := DB_Read(A_LoopFileFullPath)
         If (RD) {
+            Arr := CalcProfit(RD)
             LV_Add("", Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
-            SPr += Arr[2][1]
-            CP += Arr[2][2]
-            OAPr += Arr[2][3]
+            SPr := Arr[2][1] + SPr
+            CP := Arr[2][2] + CP
+            OAPr := Arr[2][3] + OAPr
         }
     }
     GuiControl, Main:, OAProfit, % OAPr
@@ -862,7 +1025,7 @@ Return, Decode(Info)
 Hide(ListCtrl) {
     Loop, Parse, ListCtrl, `,
     {
-        GuiControl, Main:Hide, % A_LoopField
+        GuiControl, Main:Hide, % StrReplace(A_LoopField, "$")
     }
 }
 
@@ -924,4 +1087,70 @@ LoadBackground() {
 
         Gui, Main:Add, Picture, % "x" PosArr[1] " y" PosArr[2] " w" DemArr[1] " h" DemArr[2] " v" Set[1], % "Img\" A_LoopFileName
     }
+}
+
+RemoveFromStock(BC, QN) {
+    Data := ""
+    For Index, Item in StrSplit(DB_Read("Sets\PD.db"), "|") {
+        Line := Item
+        ThisArr := StrSplit(Item, ";")
+        If ((ThisBc := ThisArr[1]) = BC) {
+
+            If (ThisArr[5] > QN)
+                ThisArr[5] := ThisArr[5] - QN
+            Else
+                ThisArr[5] := 0
+            Line := ThisArr[1] ";" ThisArr[2] ";" ThisArr[3] ";" ThisArr[4] ";" ThisArr[5]
+
+        }
+        Data .= Line "|"
+    }
+    DB_Write("Sets\PD.db", Trim(Data, "|"))
+}
+
+RandomHexColor() {
+    global
+    Frag := Seq := ""
+    Loop, 3 {
+        Random, Bol, 0, 1
+        If (Bol) {
+            Random, Int, 0, 9
+            Random, Bol, 0, 1
+            If (Bol) {
+                Random, AInt, 1, 6
+                Random, Bol, 0, 1
+                If (Bol)
+                    Frag := Int Table[AInt]
+                Else
+                    Frag := Table[AInt] Int
+            } Else {
+                Random, _Int, 0, 9
+                Random, Bol, 0, 1
+                If (Bol)
+                    Frag := Int _Int
+                Else
+                    Frag := _Int Int
+            }
+        } Else {
+            Random, AInt, 1, 6
+            Random, Bol, 0, 1
+            If (Bol) {
+                Random, Int, 1, 6
+                Random, Bol, 0, 1
+                If (Bol)
+                    Frag := Int Table[AInt]
+                Else
+                    Frag := Table[AInt] Int
+            } Else {
+                Random, _AInt, 1, 6
+                Random, Bol, 0, 1
+                If (Bol)
+                    Frag := AInt _AInt
+                Else
+                    Frag := _AInt AInt
+            }
+        }
+        Seq .= Frag
+    }
+    Return, Seq
 }
