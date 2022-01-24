@@ -1,18 +1,776 @@
-﻿
+﻿; <COMPILER: v1.1.33.10>
 #NoEnv
 #Persistent
+#SingleInstance, Force
 SendMode Input
 SetWorkingDir %A_ScriptDir%
-
-#Include, <Class_CtlColors>
-#Include, <Class_ImageButton>
-#Include, <UseGDIP>
-#Include, <Class_LVColors>
-
-OnMessage(0x201, "WM_LBUTTONDOWN")
-
+Class CtlColors {
+    Static Attached := {}
+    Static HandledMessages := {Edit: 0, ListBox: 0, Static: 0}
+    Static MessageHandler := "CtlColors_OnMessage"
+    Static WM_CTLCOLOR := {Edit: 0x0133, ListBox: 0x134, Static: 0x0138}
+    Static HTML := {AQUA: 0xFFFF00, BLACK: 0x000000, BLUE: 0xFF0000, FUCHSIA: 0xFF00FF, GRAY: 0x808080, GREEN: 0x008000
+        , LIME: 0x00FF00, MAROON: 0x000080, NAVY: 0x800000, OLIVE: 0x008080, PURPLE: 0x800080, RED: 0x0000FF
+    , SILVER: 0xC0C0C0, TEAL: 0x808000, WHITE: 0xFFFFFF, YELLOW: 0x00FFFF}
+    Static NullBrush := DllCall("GetStockObject", "Int", 5, "UPtr")
+    Static SYSCOLORS := {Edit: "", ListBox: "", Static: ""}
+    Static ErrorMsg := ""
+    Static InitClass := CtlColors.ClassInit()
+    __New() {
+        If (This.InitClass == "!DONE!") {
+            This["!Access_Denied!"] := True
+            Return False
+        }
+    }
+    __Delete() {
+        If This["!Access_Denied!"]
+            Return
+        This.Free()
+    }
+    ClassInit() {
+        CtlColors := New CtlColors
+        Return "!DONE!"
+    }
+    CheckBkColor(ByRef BkColor, Class) {
+        This.ErrorMsg := ""
+        If (BkColor != "") && !This.HTML.HasKey(BkColor) && !RegExMatch(BkColor, "^[[:xdigit:]]{6}$") {
+            This.ErrorMsg := "Invalid parameter BkColor: " . BkColor
+            Return False
+        }
+        BkColor := BkColor = "" ? This.SYSCOLORS[Class]
+        : This.HTML.HasKey(BkColor) ? This.HTML[BkColor]
+        : "0x" . SubStr(BkColor, 5, 2) . SubStr(BkColor, 3, 2) . SubStr(BkColor, 1, 2)
+        Return True
+    }
+    CheckTxColor(ByRef TxColor) {
+        This.ErrorMsg := ""
+        If (TxColor != "") && !This.HTML.HasKey(TxColor) && !RegExMatch(TxColor, "i)^[[:xdigit:]]{6}$") {
+            This.ErrorMsg := "Invalid parameter TextColor: " . TxColor
+            Return False
+        }
+        TxColor := TxColor = "" ? ""
+        : This.HTML.HasKey(TxColor) ? This.HTML[TxColor]
+        : "0x" . SubStr(TxColor, 5, 2) . SubStr(TxColor, 3, 2) . SubStr(TxColor, 1, 2)
+        Return True
+    }
+    Attach(HWND, BkColor, TxColor := "") {
+        Static ClassNames := {Button: "", ComboBox: "", Edit: "", ListBox: "", Static: ""}
+        Static BS_CHECKBOX := 0x2, BS_RADIOBUTTON := 0x8
+        Static ES_READONLY := 0x800
+        Static COLOR_3DFACE := 15, COLOR_WINDOW := 5
+        If (This.SYSCOLORS.Edit = "") {
+            This.SYSCOLORS.Static := DllCall("User32.dll\GetSysColor", "Int", COLOR_3DFACE, "UInt")
+            This.SYSCOLORS.Edit := DllCall("User32.dll\GetSysColor", "Int", COLOR_WINDOW, "UInt")
+            This.SYSCOLORS.ListBox := This.SYSCOLORS.Edit
+        }
+        This.ErrorMsg := ""
+        If (BkColor = "") && (TxColor = "") {
+            This.ErrorMsg := "Both parameters BkColor and TxColor are empty!"
+            Return False
+        }
+        If !(CtrlHwnd := HWND + 0) || !DllCall("User32.dll\IsWindow", "UPtr", HWND, "UInt") {
+            This.ErrorMsg := "Invalid parameter HWND: " . HWND
+            Return False
+        }
+        If This.Attached.HasKey(HWND) {
+            This.ErrorMsg := "Control " . HWND . " is already registered!"
+            Return False
+        }
+        Hwnds := [CtrlHwnd]
+        Classes := ""
+        WinGetClass, CtrlClass, ahk_id %CtrlHwnd%
+        This.ErrorMsg := "Unsupported control class: " . CtrlClass
+        If !ClassNames.HasKey(CtrlClass)
+            Return False
+        ControlGet, CtrlStyle, Style, , , ahk_id %CtrlHwnd%
+        If (CtrlClass = "Edit")
+            Classes := ["Edit", "Static"]
+        Else If (CtrlClass = "Button") {
+            IF (CtrlStyle & BS_RADIOBUTTON) || (CtrlStyle & BS_CHECKBOX)
+                Classes := ["Static"]
+            Else
+                Return False
+        }
+        Else If (CtrlClass = "ComboBox") {
+            VarSetCapacity(CBBI, 40 + (A_PtrSize * 3), 0)
+            NumPut(40 + (A_PtrSize * 3), CBBI, 0, "UInt")
+            DllCall("User32.dll\GetComboBoxInfo", "Ptr", CtrlHwnd, "Ptr", &CBBI)
+            Hwnds.Insert(NumGet(CBBI, 40 + (A_PtrSize * 2, "UPtr")) + 0)
+            Hwnds.Insert(Numget(CBBI, 40 + A_PtrSize, "UPtr") + 0)
+            Classes := ["Edit", "Static", "ListBox"]
+        }
+        If !IsObject(Classes)
+            Classes := [CtrlClass]
+        If (BkColor <> "Trans")
+            If !This.CheckBkColor(BkColor, Classes[1])
+            Return False
+        If !This.CheckTxColor(TxColor)
+            Return False
+        For I, V In Classes {
+            If (This.HandledMessages[V] = 0)
+                OnMessage(This.WM_CTLCOLOR[V], This.MessageHandler)
+            This.HandledMessages[V] += 1
+        }
+        If (BkColor = "Trans")
+            Brush := This.NullBrush
+        Else
+            Brush := DllCall("Gdi32.dll\CreateSolidBrush", "UInt", BkColor, "UPtr")
+        For I, V In Hwnds
+            This.Attached[V] := {Brush: Brush, TxColor: TxColor, BkColor: BkColor, Classes: Classes, Hwnds: Hwnds}
+        DllCall("User32.dll\InvalidateRect", "Ptr", HWND, "Ptr", 0, "Int", 1)
+        This.ErrorMsg := ""
+        Return True
+    }
+    Change(HWND, BkColor, TxColor := "") {
+        This.ErrorMsg := ""
+        HWND += 0
+        If !This.Attached.HasKey(HWND)
+            Return This.Attach(HWND, BkColor, TxColor)
+        CTL := This.Attached[HWND]
+        If (BkColor <> "Trans")
+            If !This.CheckBkColor(BkColor, CTL.Classes[1])
+            Return False
+        If !This.CheckTxColor(TxColor)
+            Return False
+        If (BkColor <> CTL.BkColor) {
+            If (CTL.Brush) {
+                If (Ctl.Brush <> This.NullBrush)
+                    DllCall("Gdi32.dll\DeleteObject", "Prt", CTL.Brush)
+                This.Attached[HWND].Brush := 0
+            }
+            If (BkColor = "Trans")
+                Brush := This.NullBrush
+            Else
+                Brush := DllCall("Gdi32.dll\CreateSolidBrush", "UInt", BkColor, "UPtr")
+            For I, V In CTL.Hwnds {
+                This.Attached[V].Brush := Brush
+                This.Attached[V].BkColor := BkColor
+            }
+        }
+        For I, V In Ctl.Hwnds
+            This.Attached[V].TxColor := TxColor
+        This.ErrorMsg := ""
+        DllCall("User32.dll\InvalidateRect", "Ptr", HWND, "Ptr", 0, "Int", 1)
+        Return True
+    }
+    Detach(HWND) {
+        This.ErrorMsg := ""
+        HWND += 0
+        If This.Attached.HasKey(HWND) {
+            CTL := This.Attached[HWND].Clone()
+            If (CTL.Brush) && (CTL.Brush <> This.NullBrush)
+                DllCall("Gdi32.dll\DeleteObject", "Prt", CTL.Brush)
+            For I, V In CTL.Classes {
+                If This.HandledMessages[V] > 0 {
+                    This.HandledMessages[V] -= 1
+                    If This.HandledMessages[V] = 0
+                        OnMessage(This.WM_CTLCOLOR[V], "")
+                } }
+                For I, V In CTL.Hwnds
+                    This.Attached.Remove(V, "")
+                DllCall("User32.dll\InvalidateRect", "Ptr", HWND, "Ptr", 0, "Int", 1)
+                CTL := ""
+                Return True
+            }
+            This.ErrorMsg := "Control " . HWND . " is not registered!"
+            Return False
+        }
+        Free() {
+            For K, V In This.Attached
+                If (V.Brush) && (V.Brush <> This.NullBrush)
+                DllCall("Gdi32.dll\DeleteObject", "Ptr", V.Brush)
+            For K, V In This.HandledMessages
+            If (V > 0) {
+                OnMessage(This.WM_CTLCOLOR[K], "")
+                This.HandledMessages[K] := 0
+            }
+            This.Attached := {}
+            Return True
+        }
+        IsAttached(HWND) {
+            Return This.Attached.HasKey(HWND)
+        }
+    }
+    CtlColors_OnMessage(HDC, HWND) {
+        Critical
+        If CtlColors.IsAttached(HWND) {
+            CTL := CtlColors.Attached[HWND]
+            If (CTL.TxColor != "")
+                DllCall("Gdi32.dll\SetTextColor", "Ptr", HDC, "UInt", CTL.TxColor)
+            If (CTL.BkColor = "Trans")
+                DllCall("Gdi32.dll\SetBkMode", "Ptr", HDC, "UInt", 1)
+            Else
+                DllCall("Gdi32.dll\SetBkColor", "Ptr", HDC, "UInt", CTL.BkColor)
+            Return CTL.Brush
+        }
+    }
+    Class ImageButton {
+        Static DefGuiColor := ""
+        Static DefTxtColor := "Black"
+        Static LastError := ""
+        Static BitMaps := []
+        Static GDIPDll := 0
+        Static GDIPToken := 0
+        Static MaxOptions := 8
+        Static HTML := {BLACK: 0x000000, GRAY: 0x808080, SILVER: 0xC0C0C0, WHITE: 0xFFFFFF, MAROON: 0x800000
+            , PURPLE: 0x800080, FUCHSIA: 0xFF00FF, RED: 0xFF0000, GREEN: 0x008000, OLIVE: 0x808000
+        , YELLOW: 0xFFFF00, LIME: 0x00FF00, NAVY: 0x000080, TEAL: 0x008080, AQUA: 0x00FFFF, BLUE: 0x0000FF}
+        Static ClassInit := ImageButton.InitClass()
+        __New(P*) {
+            Return False
+        }
+        InitClass() {
+            GuiColor := DllCall("User32.dll\GetSysColor", "Int", 15, "UInt")
+            This.DefGuiColor := ((GuiColor >> 16) & 0xFF) | (GuiColor & 0x00FF00) | ((GuiColor & 0xFF) << 16)
+            Return True
+        }
+        BitmapOrIcon(O2, O3) {
+            Return (This.IsInt(O2) && (O3 = "HICON")) || (DllCall("GetObjectType", "Ptr", O2, "UInt") = 7) || FileExist(O2)
+        }
+        FreeBitmaps() {
+            For I, HBITMAP In This.BitMaps
+                DllCall("Gdi32.dll\DeleteObject", "Ptr", HBITMAP)
+            This.BitMaps := []
+        }
+        GetARGB(RGB) {
+            ARGB := This.HTML.HasKey(RGB) ? This.HTML[RGB] : RGB
+            Return (ARGB & 0xFF000000) = 0 ? 0xFF000000 | ARGB : ARGB
+        }
+        IsInt(Val) {
+            If Val Is Integer
+                Return True
+            Return False
+        }
+        PathAddRectangle(Path, X, Y, W, H) {
+            Return DllCall("Gdiplus.dll\GdipAddPathRectangle", "Ptr", Path, "Float", X, "Float", Y, "Float", W, "Float", H)
+        }
+        PathAddRoundedRect(Path, X1, Y1, X2, Y2, R) {
+            D := (R * 2), X2 -= D, Y2 -= D
+            DllCall("Gdiplus.dll\GdipAddPathArc"
+            , "Ptr", Path, "Float", X1, "Float", Y1, "Float", D, "Float", D, "Float", 180, "Float", 90)
+            DllCall("Gdiplus.dll\GdipAddPathArc"
+            , "Ptr", Path, "Float", X2, "Float", Y1, "Float", D, "Float", D, "Float", 270, "Float", 90)
+            DllCall("Gdiplus.dll\GdipAddPathArc"
+            , "Ptr", Path, "Float", X2, "Float", Y2, "Float", D, "Float", D, "Float", 0, "Float", 90)
+            DllCall("Gdiplus.dll\GdipAddPathArc"
+            , "Ptr", Path, "Float", X1, "Float", Y2, "Float", D, "Float", D, "Float", 90, "Float", 90)
+            Return DllCall("Gdiplus.dll\GdipClosePathFigure", "Ptr", Path)
+        }
+        SetRect(ByRef Rect, X1, Y1, X2, Y2) {
+            VarSetCapacity(Rect, 16, 0)
+            NumPut(X1, Rect, 0, "Int"), NumPut(Y1, Rect, 4, "Int")
+            NumPut(X2, Rect, 8, "Int"), NumPut(Y2, Rect, 12, "Int")
+            Return True
+        }
+        SetRectF(ByRef Rect, X, Y, W, H) {
+            VarSetCapacity(Rect, 16, 0)
+            NumPut(X, Rect, 0, "Float"), NumPut(Y, Rect, 4, "Float")
+            NumPut(W, Rect, 8, "Float"), NumPut(H, Rect, 12, "Float")
+            Return True
+        }
+        SetError(Msg) {
+            If (This.Bitmap)
+                DllCall("Gdiplus.dll\GdipDisposeImage", "Ptr", This.Bitmap)
+            If (This.Graphics)
+                DllCall("Gdiplus.dll\GdipDeleteGraphics", "Ptr", This.Graphics)
+            If (This.Font)
+                DllCall("Gdiplus.dll\GdipDeleteFont", "Ptr", This.Font)
+            This.Delete("Bitmap")
+            This.Delete("Graphics")
+            This.Delete("Font")
+            This.FreeBitmaps()
+            This.LastError := Msg
+            Return False
+        }
+        Create(HWND, Options*) {
+            Static BCM_GETIMAGELIST := 0x1603, BCM_SETIMAGELIST := 0x1602
+            , BS_CHECKBOX := 0x02, BS_RADIOBUTTON := 0x04, BS_GROUPBOX := 0x07, BS_AUTORADIOBUTTON := 0x09
+            , BS_LEFT := 0x0100, BS_RIGHT := 0x0200, BS_CENTER := 0x0300, BS_TOP := 0x0400, BS_BOTTOM := 0x0800
+            , BS_VCENTER := 0x0C00, BS_BITMAP := 0x0080
+            , BUTTON_IMAGELIST_ALIGN_LEFT := 0, BUTTON_IMAGELIST_ALIGN_RIGHT := 1, BUTTON_IMAGELIST_ALIGN_CENTER := 4
+            , ILC_COLOR32 := 0x20
+            , OBJ_BITMAP := 7
+            , RCBUTTONS := BS_CHECKBOX | BS_RADIOBUTTON | BS_AUTORADIOBUTTON
+            , SA_LEFT := 0x00, SA_CENTER := 0x01, SA_RIGHT := 0x02
+            , WM_GETFONT := 0x31
+            This.LastError := ""
+            HBITMAP := HFORMAT := PBITMAP := PBRUSH := PFONT := PPATH := 0
+            If !DllCall("User32.dll\IsWindow", "Ptr", HWND)
+                Return This.SetError("Invalid parameter HWND!")
+            If !(IsObject(Options)) || (Options.MinIndex() <> 1) || (Options.MaxIndex() > This.MaxOptions)
+                Return This.SetError("Invalid parameter Options!")
+            WinGetClass, BtnClass, ahk_id %HWND%
+            ControlGet, BtnStyle, Style, , , ahk_id %HWND%
+            If (BtnClass != "Button") || ((BtnStyle & 0xF ^ BS_GROUPBOX) = 0) || ((BtnStyle & RCBUTTONS) > 1)
+                Return This.SetError("The control must be a pushbutton!")
+            HFONT := DllCall("User32.dll\SendMessage", "Ptr", HWND, "UInt", WM_GETFONT, "Ptr", 0, "Ptr", 0, "Ptr")
+            DC := DllCall("User32.dll\GetDC", "Ptr", HWND, "Ptr")
+            DllCall("Gdi32.dll\SelectObject", "Ptr", DC, "Ptr", HFONT)
+            DllCall("Gdiplus.dll\GdipCreateFontFromDC", "Ptr", DC, "PtrP", PFONT)
+            DllCall("User32.dll\ReleaseDC", "Ptr", HWND, "Ptr", DC)
+            If !(This.Font := PFONT)
+                Return This.SetError("Couldn't get button's font!")
+            VarSetCapacity(RECT, 16, 0)
+            If !DllCall("User32.dll\GetWindowRect", "Ptr", HWND, "Ptr", &RECT)
+                Return This.SetError("Couldn't get button's rectangle!")
+            BtnW := NumGet(RECT, 8, "Int") - NumGet(RECT, 0, "Int")
+            BtnH := NumGet(RECT, 12, "Int") - NumGet(RECT, 4, "Int")
+            ControlGetText, BtnCaption, , ahk_id %HWND%
+            If (ErrorLevel)
+                Return This.SetError("Couldn't get button's caption!")
+            DllCall("Gdiplus.dll\GdipCreateBitmapFromScan0", "Int", BtnW, "Int", BtnH, "Int", 0
+            , "UInt", 0x26200A, "Ptr", 0, "PtrP", PBITMAP)
+            If !(This.Bitmap := PBITMAP)
+                Return This.SetError("Couldn't create the GDI+ bitmap!")
+            PGRAPHICS := 0
+            DllCall("Gdiplus.dll\GdipGetImageGraphicsContext", "Ptr", PBITMAP, "PtrP", PGRAPHICS)
+            If !(This.Graphics := PGRAPHICS)
+                Return This.SetError("Couldn't get the the GDI+ bitmap's graphics!")
+            DllCall("Gdiplus.dll\GdipSetSmoothingMode", "Ptr", PGRAPHICS, "UInt", 4)
+            DllCall("Gdiplus.dll\GdipSetInterpolationMode", "Ptr", PGRAPHICS, "Int", 7)
+            DllCall("Gdiplus.dll\GdipSetCompositingQuality", "Ptr", PGRAPHICS, "UInt", 4)
+            DllCall("Gdiplus.dll\GdipSetRenderingOrigin", "Ptr", PGRAPHICS, "Int", 0, "Int", 0)
+            DllCall("Gdiplus.dll\GdipSetPixelOffsetMode", "Ptr", PGRAPHICS, "UInt", 4)
+            This.BitMaps := []
+            For Idx, Opt In Options {
+                If !IsObject(Opt)
+                    Continue
+                BkgColor1 := BkgColor2 := TxtColor := Mode := Rounded := GuiColor := Image := ""
+                Loop, % This.MaxOptions {
+                    If (Opt[A_Index] = "")
+                        Opt[A_Index] := Options[1, A_Index]
+                }
+                Mode := SubStr(Opt[1], 1 ,1)
+                If !InStr("0123456789", Mode)
+                    Return This.SetError("Invalid value for Mode in Options[" . Idx . "]!")
+                If (Mode = 0) && This.BitmapOrIcon(Opt[2], Opt[3])
+                    Image := Opt[2]
+                Else {
+                    If !This.IsInt(Opt[2]) && !This.HTML.HasKey(Opt[2])
+                        Return This.SetError("Invalid value for StartColor in Options[" . Idx . "]!")
+                    BkgColor1 := This.GetARGB(Opt[2])
+                    If (Opt[3] = "")
+                        Opt[3] := Opt[2]
+                    If !This.IsInt(Opt[3]) && !This.HTML.HasKey(Opt[3])
+                        Return This.SetError("Invalid value for TargetColor in Options[" . Idx . "]!")
+                    BkgColor2 := This.GetARGB(Opt[3])
+                }
+                If (Opt[4] = "")
+                    Opt[4] := This.DefTxtColor
+                If !This.IsInt(Opt[4]) && !This.HTML.HasKey(Opt[4])
+                    Return This.SetError("Invalid value for TxtColor in Options[" . Idx . "]!")
+                TxtColor := This.GetARGB(Opt[4])
+                Rounded := Opt[5]
+                If (Rounded = "H")
+                    Rounded := BtnH * 0.5
+                If (Rounded = "W")
+                    Rounded := BtnW * 0.5
+                If ((Rounded + 0) = "")
+                    Rounded := 0
+                If (Opt[6] = "")
+                    Opt[6] := This.DefGuiColor
+                If !This.IsInt(Opt[6]) && !This.HTML.HasKey(Opt[6])
+                    Return This.SetError("Invalid value for GuiColor in Options[" . Idx . "]!")
+                GuiColor := This.GetARGB(Opt[6])
+                BorderColor := ""
+                If (Opt[7] <> "") {
+                    If !This.IsInt(Opt[7]) && !This.HTML.HasKey(Opt[7])
+                        Return This.SetError("Invalid value for BorderColor in Options[" . Idx . "]!")
+                    BorderColor := 0xFF000000 | This.GetARGB(Opt[7])
+                }
+                BorderWidth := Opt[8] ? Opt[8] : 1
+                DllCall("Gdiplus.dll\GdipGraphicsClear", "Ptr", PGRAPHICS, "UInt", GuiColor)
+                If (Image = "") {
+                    PathX := PathY := 0, PathW := BtnW, PathH := BtnH
+                    DllCall("Gdiplus.dll\GdipCreatePath", "UInt", 0, "PtrP", PPATH)
+                    If (Rounded < 1)
+                        This.PathAddRectangle(PPATH, PathX, PathY, PathW, PathH)
+                    Else
+                        This.PathAddRoundedRect(PPATH, PathX, PathY, PathW, PathH, Rounded)
+                    If (BorderColor <> "") && (BorderWidth > 0) && (Mode <> 7) {
+                        DllCall("Gdiplus.dll\GdipCreateSolidFill", "UInt", BorderColor, "PtrP", PBRUSH)
+                        DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                        DllCall("Gdiplus.dll\GdipDeleteBrush", "Ptr", PBRUSH)
+                        DllCall("Gdiplus.dll\GdipResetPath", "Ptr", PPATH)
+                        PathX := PathY := BorderWidth, PathW -= BorderWidth, PathH -= BorderWidth, Rounded -= BorderWidth
+                        If (Rounded < 1)
+                            This.PathAddRectangle(PPATH, PathX, PathY, PathW - PathX, PathH - PathY)
+                        Else
+                            This.PathAddRoundedRect(PPATH, PathX, PathY, PathW, PathH, Rounded)
+                        BkgColor1 := 0xFF000000 | BkgColor1
+                        BkgColor2 := 0xFF000000 | BkgColor2
+                    }
+                    PathW -= PathX
+                    PathH -= PathY
+                    PBRUSH := 0
+                    If (Mode = 0) {
+                        DllCall("Gdiplus.dll\GdipCreateSolidFill", "UInt", BkgColor1, "PtrP", PBRUSH)
+                        DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                    }
+                    Else If (Mode = 1) || (Mode = 2) {
+                        This.SetRectF(RECTF, PathX, PathY, PathW, PathH)
+                        DllCall("Gdiplus.dll\GdipCreateLineBrushFromRect", "Ptr", &RECTF
+                        , "UInt", BkgColor1, "UInt", BkgColor2, "Int", Mode & 1, "Int", 3, "PtrP", PBRUSH)
+                        DllCall("Gdiplus.dll\GdipSetLineGammaCorrection", "Ptr", PBRUSH, "Int", 1)
+                        This.SetRect(COLORS, BkgColor1, BkgColor1, BkgColor2, BkgColor2)
+                        This.SetRectF(POSITIONS, 0, 0.5, 0.5, 1)
+                        DllCall("Gdiplus.dll\GdipSetLinePresetBlend", "Ptr", PBRUSH
+                        , "Ptr", &COLORS, "Ptr", &POSITIONS, "Int", 4)
+                        DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                    }
+                    Else If (Mode >= 3) && (Mode <= 6) {
+                        W := Mode = 6 ? PathW / 2 : PathW
+                        H := Mode = 5 ? PathH / 2 : PathH
+                        This.SetRectF(RECTF, PathX, PathY, W, H)
+                        DllCall("Gdiplus.dll\GdipCreateLineBrushFromRect", "Ptr", &RECTF
+                        , "UInt", BkgColor1, "UInt", BkgColor2, "Int", Mode & 1, "Int", 3, "PtrP", PBRUSH)
+                        DllCall("Gdiplus.dll\GdipSetLineGammaCorrection", "Ptr", PBRUSH, "Int", 1)
+                        DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                    }
+                    Else {
+                        DllCall("Gdiplus.dll\GdipCreatePathGradientFromPath", "Ptr", PPATH, "PtrP", PBRUSH)
+                        DllCall("Gdiplus.dll\GdipSetPathGradientGammaCorrection", "Ptr", PBRUSH, "UInt", 1)
+                        VarSetCapacity(ColorArray, 4, 0)
+                        NumPut(BkgColor1, ColorArray, 0, "UInt")
+                        DllCall("Gdiplus.dll\GdipSetPathGradientSurroundColorsWithCount", "Ptr", PBRUSH, "Ptr", &ColorArray
+                        , "IntP", 1)
+                        DllCall("Gdiplus.dll\GdipSetPathGradientCenterColor", "Ptr", PBRUSH, "UInt", BkgColor2)
+                        FS := (BtnH < BtnW ? BtnH : BtnW) / 3
+                        XScale := (BtnW - FS) / BtnW
+                        YScale := (BtnH - FS) / BtnH
+                        DllCall("Gdiplus.dll\GdipSetPathGradientFocusScales", "Ptr", PBRUSH, "Float", XScale, "Float", YScale)
+                        DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                    }
+                    DllCall("Gdiplus.dll\GdipDeleteBrush", "Ptr", PBRUSH)
+                    DllCall("Gdiplus.dll\GdipDeletePath", "Ptr", PPATH)
+                } Else {
+                    If This.IsInt(Image)
+                        If (Opt[3] = "HICON")
+                        DllCall("Gdiplus.dll\GdipCreateBitmapFromHICON", "Ptr", Image, "PtrP", PBM)
+                    Else
+                        DllCall("Gdiplus.dll\GdipCreateBitmapFromHBITMAP", "Ptr", Image, "Ptr", 0, "PtrP", PBM)
+                    Else
+                        DllCall("Gdiplus.dll\GdipCreateBitmapFromFile", "WStr", Image, "PtrP", PBM)
+                    DllCall("Gdiplus.dll\GdipDrawImageRectI", "Ptr", PGRAPHICS, "Ptr", PBM, "Int", 0, "Int", 0
+                    , "Int", BtnW, "Int", BtnH)
+                    DllCall("Gdiplus.dll\GdipDisposeImage", "Ptr", PBM)
+                }
+                If (BtnCaption <> "") {
+                    DllCall("Gdiplus.dll\GdipStringFormatGetGenericTypographic", "PtrP", HFORMAT)
+                    DllCall("Gdiplus.dll\GdipCreateSolidFill", "UInt", TxtColor, "PtrP", PBRUSH)
+                    HALIGN := (BtnStyle & BS_CENTER) = BS_CENTER ? SA_CENTER
+                    : (BtnStyle & BS_CENTER) = BS_RIGHT ? SA_RIGHT
+                    : (BtnStyle & BS_CENTER) = BS_Left ? SA_LEFT
+                    : SA_CENTER
+                    DllCall("Gdiplus.dll\GdipSetStringFormatAlign", "Ptr", HFORMAT, "Int", HALIGN)
+                    VALIGN := (BtnStyle & BS_VCENTER) = BS_TOP ? 0
+                    : (BtnStyle & BS_VCENTER) = BS_BOTTOM ? 2
+                    : 1
+                    DllCall("Gdiplus.dll\GdipSetStringFormatLineAlign", "Ptr", HFORMAT, "Int", VALIGN)
+                    DllCall("Gdiplus.dll\GdipSetTextRenderingHint", "Ptr", PGRAPHICS, "Int", 0)
+                    VarSetCapacity(RECT, 16, 0)
+                    NumPut(BtnW, RECT, 8, "Float")
+                    NumPut(BtnH, RECT, 12, "Float")
+                    DllCall("Gdiplus.dll\GdipDrawString", "Ptr", PGRAPHICS, "WStr", BtnCaption, "Int", -1
+                    , "Ptr", PFONT, "Ptr", &RECT, "Ptr", HFORMAT, "Ptr", PBRUSH)
+                }
+                DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "Ptr", PBITMAP, "PtrP", HBITMAP, "UInt", 0X00FFFFFF)
+                This.BitMaps[Idx] := HBITMAP
+                DllCall("Gdiplus.dll\GdipDeleteBrush", "Ptr", PBRUSH)
+                DllCall("Gdiplus.dll\GdipDeleteStringFormat", "Ptr", HFORMAT)
+            }
+            DllCall("Gdiplus.dll\GdipDisposeImage", "Ptr", PBITMAP)
+            DllCall("Gdiplus.dll\GdipDeleteGraphics", "Ptr", PGRAPHICS)
+            DllCall("Gdiplus.dll\GdipDeleteFont", "Ptr", PFONT)
+            This.Delete("Bitmap")
+            This.Delete("Graphics")
+            This.Delete("Font")
+            HIL := DllCall("Comctl32.dll\ImageList_Create"
+            , "UInt", BtnW, "UInt", BtnH, "UInt", ILC_COLOR32, "Int", 6, "Int", 0, "Ptr")
+            Loop, % (This.BitMaps.MaxIndex() > 1 ? 6 : 1) {
+                HBITMAP := This.BitMaps.HasKey(A_Index) ? This.BitMaps[A_Index] : This.BitMaps.1
+                DllCall("Comctl32.dll\ImageList_Add", "Ptr", HIL, "Ptr", HBITMAP, "Ptr", 0)
+            }
+            VarSetCapacity(BIL, 20 + A_PtrSize, 0)
+            DllCall("User32.dll\SendMessage", "Ptr", HWND, "UInt", BCM_GETIMAGELIST, "Ptr", 0, "Ptr", &BIL)
+            IL := NumGet(BIL, "UPtr")
+            VarSetCapacity(BIL, 20 + A_PtrSize, 0)
+            NumPut(HIL, BIL, 0, "Ptr")
+            Numput(BUTTON_IMAGELIST_ALIGN_CENTER, BIL, A_PtrSize + 16, "UInt")
+            ControlSetText, , , ahk_id %HWND%
+            Control, Style, +%BS_BITMAP%, , ahk_id %HWND%
+            If(IL)
+                IL_Destroy(IL)
+            DllCall("User32.dll\SendMessage", "Ptr", HWND, "UInt", BCM_SETIMAGELIST, "Ptr", 0, "Ptr", 0)
+            DllCall("User32.dll\SendMessage", "Ptr", HWND, "UInt", BCM_SETIMAGELIST, "Ptr", 0, "Ptr", &BIL)
+            This.FreeBitmaps()
+            Return True
+        }
+        SetGuiColor(GuiColor) {
+            If !(GuiColor + 0) && !This.HTML.HasKey(GuiColor)
+                Return False
+            This.DefGuiColor := (This.HTML.HasKey(GuiColor) ? This.HTML[GuiColor] : GuiColor) & 0xFFFFFF
+            Return True
+        }
+        SetTxtColor(TxtColor) {
+            If !(TxtColor + 0) && !This.HTML.HasKey(TxtColor)
+                Return False
+            This.DefTxtColor := (This.HTML.HasKey(TxtColor) ? This.HTML[TxtColor] : TxtColor) & 0xFFFFFF
+            Return True
+        }
+    }
+    UseGDIP(Params*) {
+        Static GdipObject := ""
+        , GdipModule := ""
+        , GdipToken := ""
+        Static OnLoad := UseGDIP()
+        If (GdipModule = "") {
+            If !DllCall("LoadLibrary", "Str", "Gdiplus.dll", "UPtr")
+                UseGDIP_Error("The Gdiplus.dll could not be loaded!`n`nThe program will exit!")
+            If !DllCall("GetModuleHandleEx", "UInt", 0x00000001, "Str", "Gdiplus.dll", "PtrP", GdipModule, "UInt")
+                UseGDIP_Error("The Gdiplus.dll could not be loaded!`n`nThe program will exit!")
+            VarSetCapacity(SI, 24, 0), NumPut(1, SI, 0, "UInt")
+            If DllCall("Gdiplus.dll\GdiplusStartup", "PtrP", GdipToken, "Ptr", &SI, "Ptr", 0)
+                UseGDIP_Error("GDI+ could not be startet!`n`nThe program will exit!")
+        GdipObject := {Base: {__Delete: Func("UseGDIP").Bind(GdipModule, GdipToken)}}
+    }
+    Else If (Params[1] = GdipModule) && (Params[2] = GdipToken)
+        DllCall("Gdiplus.dll\GdiplusShutdown", "Ptr", GdipToken)
+}
+UseGDIP_Error(ErrorMsg) {
+    MsgBox, 262160, UseGDIP, %ErrorMsg%
+    ExitApp
+}
+Class LV_Colors {
+    __New(HWND, StaticMode := False, NoSort := True, NoSizing := True) {
+        If (This.Base.Base.__Class)
+            Return False
+        If This.Attached[HWND]
+            Return False
+        If !DllCall("IsWindow", "Ptr", HWND)
+            Return False
+        VarSetCapacity(Class, 512, 0)
+        DllCall("GetClassName", "Ptr", HWND, "Str", Class, "Int", 256)
+        If (Class <> "SysListView32")
+            Return False
+        SendMessage, 0x1036, 0x010000, 0x010000, , % "ahk_id " . HWND
+        SendMessage, 0x1025, 0, 0, , % "ahk_id " . HWND
+        This.BkClr := ErrorLevel
+        SendMessage, 0x1023, 0, 0, , % "ahk_id " . HWND
+        This.TxClr := ErrorLevel
+        SendMessage, 0x101F, 0, 0, , % "ahk_id " . HWND
+        This.Header := ErrorLevel
+        This.HWND := HWND
+        This.IsStatic := !!StaticMode
+        This.AltCols := False
+        This.AltRows := False
+        This.NoSort(!!NoSort)
+        This.NoSizing(!!NoSizing)
+        This.OnMessage()
+        This.Critical := "Off"
+        This.Attached[HWND] := True
+    }
+    __Delete() {
+        This.Attached.Remove(HWND, "")
+        This.OnMessage(False)
+        WinSet, Redraw, , % "ahk_id " . This.HWND
+    }
+    Clear(AltRows := False, AltCols := False) {
+        If (AltCols)
+            This.AltCols := False
+        If (AltRows)
+            This.AltRows := False
+        This.Remove("Rows")
+        This.Remove("Cells")
+        Return True
+    }
+    AlternateRows(BkColor := "", TxColor := "") {
+        If !(This.HWND)
+            Return False
+        This.AltRows := False
+        If (BkColor = "") && (TxColor = "")
+            Return True
+        BkBGR := This.BGR(BkColor)
+        TxBGR := This.BGR(TxColor)
+        If (BkBGR = "") && (TxBGR = "")
+            Return False
+        This["ARB"] := (BkBGR <> "") ? BkBGR : This.BkClr
+        This["ART"] := (TxBGR <> "") ? TxBGR : This.TxClr
+        This.AltRows := True
+        Return True
+    }
+    AlternateCols(BkColor := "", TxColor := "") {
+        If !(This.HWND)
+            Return False
+        This.AltCols := False
+        If (BkColor = "") && (TxColor = "")
+            Return True
+        BkBGR := This.BGR(BkColor)
+        TxBGR := This.BGR(TxColor)
+        If (BkBGR = "") && (TxBGR = "")
+            Return False
+        This["ACB"] := (BkBGR <> "") ? BkBGR : This.BkClr
+        This["ACT"] := (TxBGR <> "") ? TxBGR : This.TxClr
+        This.AltCols := True
+        Return True
+    }
+    SelectionColors(BkColor := "", TxColor := "") {
+        If !(This.HWND)
+            Return False
+        This.SelColors := False
+        If (BkColor = "") && (TxColor = "")
+            Return True
+        BkBGR := This.BGR(BkColor)
+        TxBGR := This.BGR(TxColor)
+        If (BkBGR = "") && (TxBGR = "")
+            Return False
+        This["SELB"] := BkBGR
+        This["SELT"] := TxBGR
+        This.SelColors := True
+        Return True
+    }
+    Row(Row, BkColor := "", TxColor := "") {
+        If !(This.HWND)
+            Return False
+        If This.IsStatic
+            Row := This.MapIndexToID(Row)
+        This["Rows"].Remove(Row, "")
+        If (BkColor = "") && (TxColor = "")
+            Return True
+        BkBGR := This.BGR(BkColor)
+        TxBGR := This.BGR(TxColor)
+        If (BkBGR = "") && (TxBGR = "")
+            Return False
+        This["Rows", Row, "B"] := (BkBGR <> "") ? BkBGR : This.BkClr
+        This["Rows", Row, "T"] := (TxBGR <> "") ? TxBGR : This.TxClr
+        Return True
+    }
+    Cell(Row, Col, BkColor := "", TxColor := "") {
+        If !(This.HWND)
+            Return False
+        If This.IsStatic
+            Row := This.MapIndexToID(Row)
+        This["Cells", Row].Remove(Col, "")
+        If (BkColor = "") && (TxColor = "")
+            Return True
+        BkBGR := This.BGR(BkColor)
+        TxBGR := This.BGR(TxColor)
+        If (BkBGR = "") && (TxBGR = "")
+            Return False
+        If (BkBGR <> "")
+            This["Cells", Row, Col, "B"] := BkBGR
+        If (TxBGR <> "")
+            This["Cells", Row, Col, "T"] := TxBGR
+        Return True
+    }
+    NoSort(Apply := True) {
+        If !(This.HWND)
+            Return False
+        If (Apply)
+            This.SortColumns := False
+        Else
+            This.SortColumns := True
+        Return True
+    }
+    NoSizing(Apply := True) {
+        Static OSVersion := DllCall("GetVersion", "UChar")
+        If !(This.Header)
+            Return False
+        If (Apply) {
+            If (OSVersion > 5)
+                Control, Style, +0x0800, , % "ahk_id " . This.Header
+            This.ResizeColumns := False
+        }
+        Else {
+            If (OSVersion > 5)
+                Control, Style, -0x0800, , % "ahk_id " . This.Header
+            This.ResizeColumns := True
+        }
+        Return True
+    }
+    OnMessage(Apply := True) {
+        If (Apply) && !This.HasKey("OnMessageFunc") {
+            This.OnMessageFunc := ObjBindMethod(This, "On_WM_Notify")
+            OnMessage(0x004E, This.OnMessageFunc)
+        }
+        Else If !(Apply) && This.HasKey("OnMessageFunc") {
+            OnMessage(0x004E, This.OnMessageFunc, 0)
+            This.OnMessageFunc := ""
+            This.Remove("OnMessageFunc")
+        }
+        WinSet, Redraw, , % "ahk_id " . This.HWND
+        Return True
+    }
+    Static Attached := {}
+    On_WM_NOTIFY(W, L, M, H) {
+        Critical, % This.Critical
+        If ((HCTL := NumGet(L + 0, 0, "UPtr")) = This.HWND) || (HCTL = This.Header) {
+            Code := NumGet(L + (A_PtrSize * 2), 0, "Int")
+            If (Code = -12)
+                Return This.NM_CUSTOMDRAW(This.HWND, L)
+            If !This.SortColumns && (Code = -108)
+                Return 0
+            If !This.ResizeColumns && ((Code = -306) || (Code = -326))
+                Return True
+        }
+    }
+    NM_CUSTOMDRAW(H, L) {
+        Static SizeNMHDR := A_PtrSize * 3
+        Static SizeNCD := SizeNMHDR + 16 + (A_PtrSize * 5)
+        Static OffItem := SizeNMHDR + 16 + (A_PtrSize * 2)
+        Static OffItemState := OffItem + A_PtrSize
+        Static OffCT := SizeNCD
+        Static OffCB := OffCT + 4
+        Static OffSubItem := OffCB + 4
+        DrawStage := NumGet(L + SizeNMHDR, 0, "UInt")
+        , Row := NumGet(L + OffItem, "UPtr") + 1
+        , Col := NumGet(L + OffSubItem, "Int") + 1
+        , Item := Row - 1
+        If This.IsStatic
+            Row := This.MapIndexToID(Row)
+        If (DrawStage = 0x030001) {
+            UseAltCol := !(Col & 1) && (This.AltCols)
+            , ColColors := This["Cells", Row, Col]
+            , ColB := (ColColors.B <> "") ? ColColors.B : UseAltCol ? This.ACB : This.RowB
+            , ColT := (ColColors.T <> "") ? ColColors.T : UseAltCol ? This.ACT : This.RowT
+            , NumPut(ColT, L + OffCT, "UInt"), NumPut(ColB, L + OffCB, "UInt")
+            Return (!This.AltCols && !This.HasKey(Row) && (Col > This["Cells", Row].MaxIndex())) ? 0x00 : 0x20
+        }
+        If (DrawStage = 0x010001) {
+            If (This.SelColors) && DllCall("SendMessage", "Ptr", H, "UInt", 0x102C, "Ptr", Item, "Ptr", 0x0002, "UInt") {
+                NumPut(NumGet(L + OffItemState, "UInt") & ~0x0011, L + OffItemState, "UInt")
+                If (This.SELB <> "")
+                    NumPut(This.SELB, L + OffCB, "UInt")
+                If (This.SELT <> "")
+                    NumPut(This.SELT, L + OffCT, "UInt")
+                Return 0x02
+            }
+            UseAltRow := (Item & 1) && (This.AltRows)
+            , RowColors := This["Rows", Row]
+            , This.RowB := RowColors ? RowColors.B : UseAltRow ? This.ARB : This.BkClr
+            , This.RowT := RowColors ? RowColors.T : UseAltRow ? This.ART : This.TxClr
+            If (This.AltCols || This["Cells"].HasKey(Row))
+                Return 0x20
+            NumPut(This.RowT, L + OffCT, "UInt"), NumPut(This.RowB, L + OffCB, "UInt")
+            Return 0x00
+        }
+        Return (DrawStage = 0x000001) ? 0x20 : 0x00
+    }
+    MapIndexToID(Row) {
+        SendMessage, 0x10B4, % (Row - 1), 0, , % "ahk_id " . This.HWND
+        Return ErrorLevel
+    }
+    BGR(Color, Default := "") {
+        Static Integer := "Integer"
+        Static HTML := {AQUA: 0xFFFF00, BLACK: 0x000000, BLUE: 0xFF0000, FUCHSIA: 0xFF00FF, GRAY: 0x808080, GREEN: 0x008000
+            , LIME: 0x00FF00, MAROON: 0x000080, NAVY: 0x800000, OLIVE: 0x008080, PURPLE: 0x800080, RED: 0x0000FF
+        , SILVER: 0xC0C0C0, TEAL: 0x808000, WHITE: 0xFFFFFF, YELLOW: 0x00FFFF}
+        If Color Is Integer
+            Return ((Color >> 16) & 0xFF) | (Color & 0x00FF00) | ((Color & 0xFF) << 16)
+        Return (HTML.HasKey(Color) ? HTML[Color] : Default)
+    }
+}
 LoadInterfaceLng()
-
 Gui, Startup:-Caption
 Gui, Startup:Font, Bold s12, Calibri
 html := "<html><body style='background-color: transparent' style='overflow:hidden' leftmargin='0' topmargin='0'><img src='" A_ScriptDir "\Img\Load.gif' width=" w " height=" h " border=0 padding=0></body></html>"
@@ -20,302 +778,330 @@ Gui, Startup:Add, ActiveX, x0 y0 w960 h540 vAG, Shell.Explorer
 AG.navigate("about:blank")
 AG.document.write(html)
 Gui, Startup:Show, w960 h565
-
 Gui, Startup:Add, Progress, x0 w960 y540 c0x008000 h25 BackgroundWhite vUPProg
 Gui, Startup:Add, Text, x0 w960 y540 Center h25 vStat BackgroundTrans, % _22
 GuiControl, Startup:+Redraw, Stat
 GuiControl, Startup:Disabled, AG
-
 If (CheckForUpdatesStat()) {
-    If DllCall("Wininet.dll\InternetGetConnectedState", "Str", 0x40, "Int", 0) 
+    If DllCall("Wininet.dll\InternetGetConnectedState", "Str", 0x40, "Int", 0)
         CheckForUpdates()
 }
-
 Gui, StartUp:Destroy
-
 CheckFoldersSet()
-
 GreenBTN := [[0, 0xFFFFFF, , 0x008000, 0, , 0x008000, 1]
 , [0, 0x008000, , 0xFFFFFF, 0, , 0x008000, 1]
 , [0, 0x008000, , 0xFFFF00, 0, , 0x008000, 1]
 , [0, 0x6C7174, , 0x000000, 0, , 0xFFFFFF, 1]]
-
 RedBTN := [[0, 0xFFFFFF, , 0xFF0000, 0, , 0xD43F3A, 1]
 , [0, 0xFF0000, , 0xFFFFFF, 0, , 0xD43F3A, 1]
 , [0, 0xFF0000, , 0xFFFF00, 0, , 0xD43F3A, 1]
 , [0, 0x6C7174, , 0x000000, 0, , 0xFFFFFF, 1]]
-
 LMBTN := [[0, 0x80FFFFFF, , 0x000000, 0, , 0x80F0AD4E]
 , [0, 0x80F0AD4E, , 0x000000, 0, , 0x80F0AD4E]
 , [0, 0x80F0AD4E, , 0xFF0000, 0, , 0x80F0AD4E]
 , [0, 0x80F0AD4E, , 0x000000, 0, , 0x80F0AD4E]]
-
 EBTN := [[0, 0xC6E6C6, , , 0, , 0x5CB85C, 5]
 , [0, 0x91CF91, , , 0, , 0x5CB85C, 5]
 , [0, 0x5CB85C, , , 0, , 0x5CB85C, 5]
 , [0, 0xF0F0F0, , , 0, , 0x5CB85C, 5]]
-
 BMBTN := [[0, 0x80FFFFFF, , 0x000000, 0, , 0x80FFFFFF]
 , [0, 0x80F0AD4E, , 0x000000, 0, , 0x80FFFFFF]
 , [0, 0x80F0AD4E, , 0xFF0000, 0, , 0x80FFFFFF]
 , [0, 0x80F0AD4E, , 0x000000, 0, , 0x80F0AD4E]]
-
-;==============================================================================
-
-Gui, Main:-Caption +HwndMain MinSize1000x600
+HH := A_ScreenHeight // 2
+Gui, ReIn:+HwndInfo -Caption AlwaysOnTop ToolWindow MinSize800x%HH% MaxSize800x%HH% Resize
+Gui, ReIn:Font, s15 Bold, Consolas
+Gui, ReIn:Add, Edit, x0 y0 w800 h%HH% ReadOnly HwndE vDInfo
+CtlColors.Attach(E, "E2E09A", "000000")
+Gui, Main: +HwndMain MinSize1000x600
 Gui, Main:Font, s10 Bold, Calibri
 Gui, Main:Color, 0xD8D8AD
 LoadBackground()
-
 Gui, Main:Add, Text, x0 y0 w1000 h10 HwndTopText vTText
-CtlColors.Attach(TopText, "3F627F", "000000")
-
-Gui, Main:Add, Text, xm+75 ym+446 w50 BackgroundTrans c800000 vVer, % "v" Version()
-
+CtlColors.Attach(TopText, "9EA7AD", "000000")
+Pass := 0
 If !CheckLicense() {
     Gui, Main:Add, Picture, x0 y10 h419 vLicPic, Img\Lic.png
     Gui, Main:Add, Edit, xm+205 ym+135 w760 vEPassString Center
     Gui, Main:Add, Text, xm+205 ym+165 w760 vPassString Center BackgroundTrans, Please enter the KeyString
-    RMS := "#0"
+    RMS := "#-1"
     Gui, Main:Show, w1000 h500
     Return
 }
-
 OpenApp:
-Gui, Main:+Resize
-Gui, Main:Font, s13
-Gui, Main:Add, Button, x0 y10 HwndBtn w199 h40 gOpenMain Disabled vBtn1, % _4
-ImageButton.Create(Btn, LMBTN*)
-
-Gui, Main:Add, Button, x0 y90 HwndBtn w199 h40 gDefine vBtn2, % _5
-ImageButton.Create(Btn, LMBTN*)
-
-Gui, Main:Add, Button, x0 y130 HwndBtn w199 h40 gStockPile vBtn3, % _6
-ImageButton.Create(Btn, LMBTN*)
-
-Gui, Main:Add, Button, x0 y170 HwndBtn w199 h40 gProf vBtn4, % _7
-ImageButton.Create(Btn, LMBTN*)
-
-Gui, Main:Add, Button, x0 y50 HwndBtn w199 h40 gSubmit vBtn5, % _8
-ImageButton.Create(Btn, LMBTN*)
-
-Gui, Main:Font, s25, Consolas
-Gui, Main:Add, Edit, xm y500 HwndE w175 vItemsSold -E0x200 ReadOnly Center Border, 0
-CtlColors.Attach(E, "D8D8AD", "000000")
-
-Gui, Main:Add, Edit, xm y528 HwndE w175 vSoldP -E0x200 ReadOnly Center Border, 0
-CtlColors.Attach(E, "D8D8AD", "008000")
-
-Gui, Main:Add, Edit, xm y556 HwndE w175 vProfitP -E0x200 ReadOnly Center Border, 0
-CtlColors.Attach(E, "D8D8AD", "FF0000")
-
-; Main Controls
-RMS := "#1"
-MainCtrlList := "Bc,Nm,Stck,Qn,Sum,OpenSess,LV0,$GivenMoney,$AllSum,$Change"
-;Gui, Main:Add, Text, xm+360 ym+10 w100 vBcText Right, % _27
-Ind := "", Xb := 217
-Gui, Main:Font, s25, Calibri
-Gui, Main:Add, Edit, xm+380 ym+10 w250 -VScroll vBc Center -E0x200 gAnalyzeAvail Border HwndBc_ Hidden
-CtlColors.Attach(Bc_, "FFFFFF", "008000")
-Gui, Main:Add, Edit, xm+205 ym+10 w175 vStck -E0x200 ReadOnly HwndE Center Hidden
-CtlColors.Attach(E, "D8D8AD", "FF0000")
-Gui, Main:Add, Edit, xm+205 ym+70 w250 vNm -E0x200 ReadOnly HwndNm Center Hidden
-CtlColors.Attach(Nm, "FFFFFF", "000080")
-Gui, Main:Add, Edit, xm+455 ym+70 w260 vQn Center -E0x200 ReadOnly HwndQn gAnalyzeQn Hidden, x1
-CtlColors.Attach(Qn, "FFFFFF", "008000")
-Gui, Main:Add, Edit, xm+715 ym+70 w250 vSum -E0x200 ReadOnly HwndSum Center Hidden
-CtlColors.Attach(Sum, "FFFFFF", "800000")
-
-Loop, 7 {
-    Gui, Main:Add, Button, xm+%Xb% ym+300 w100 h48 vOpenSess%Ind% HwndBtn gUpdateSession Center, % A_Index
-    MainCtrlList .= ",OpenSess" Ind
-    ImageButton.Create(Btn, BMBTN*)
-    Ind := A_Index
-    Xb += 100
-}
-
-Gui, Main:Font, s50
-Gui, Main:Add, Edit, xm+205 ym+10 w254 vGivenMoney -E0x200 gCalc Center Hidden
-Gui, Main:Add, Edit, xm+460 ym+10 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
-CtlColors.Attach(AS, "FFFFFF", "008000")
-Gui, Main:Add, Edit, xm+715 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
-CtlColors.Attach(C, "FFFFFF", "FF0000")
-Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0 BackgroundFCEFDC HwndHLV Hidden, Barcode|Name|Quantity|Price
-Gui, Main:Default
-Gui, Main:ListView, LV0
-LV_ModifyCol(1, "0 Center")
-LV_ModifyCol(2, "250 Center")
-LV_ModifyCol(3, "254 Center")
-LV_ModifyCol(4, "252 Center")
-
-GuiControl, Main: Disabled, OpenSess
-GuiControl, Main: +Redraw, OpenSess
-;ThisInst := New LV_Colors(HLV)
-;ThisInst.SelectionColors("0x00FF00", "0x000000")
-
-; ==========================================================================================================
-
-; Ensure Dot Controls
-EnsureCtrlList := "LV1,EnsBtn,Sold,Bought,ProfitEq"
-Gui, Main:Font, s25
-Gui, Main:Add, Button, xm+205 ym+30 vEnsBtn w760 h80 hwndBtn Hidden gValid, % _9
-ImageButton.Create(Btn, EBTN*)
-Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV1 BackgroundDEFCDC HwndHLV Hidden, SO
-;ThisInst := New LV_Colors(HLV)
-;ThisInst.SelectionColors("0x00FF00", "0x000000")
-
-Gui, Main:Default
-Gui, Main:ListView, LV1
-LV_ModifyCol(1, "w760 Center")
-
-Gui, Main:Font, s40
-Gui, Main:Add, Edit, xm+206 ym+430 w260 vSold Center -E0x200 ReadOnly HwndE gAnalyzeQn Hidden
-CtlColors.Attach(E, "00FF00", "000000")
-Gui, Main:Add, Edit, xm+456 ym+430 w260 vBought -E0x200 ReadOnly HwndE Center Hidden
-CtlColors.Attach(E, "FF8080", "000000")
-Gui, Main:Add, Edit, xm+716 ym+430 w260 vProfitEq -E0x200 ReadOnly HwndE Center Hidden
-CtlColors.Attach(E, "00FF00", "000000")
-
-; ==========================================================================================================
-
-; Define Controls
-Gui, Main:Font, s15
-DefineCtrlList := "Dbc,Dnm,Dbp,Dsp,LV2"
-Gui, Main:Add, Edit, xm+205 ym+80 w185 Center Border vDbc HwndDbc_ -E0x200 gClearDbc Hidden
-CtlColors.Attach(Dbc_, "FFFFFF", "000000")
-Gui, Main:Add, Edit, xm+396 ym+80 w185 Center Border vDnm HwndDnm_ -E0x200 gClearDnm Hidden
-CtlColors.Attach(Dnm_, "FFFFFF", "000000")
-Gui, Main:Add, Edit, xm+589 ym+80 w185 Center Border vDbp HwndDbp_ -E0x200 gClearDbp Hidden
-CtlColors.Attach(Dbp_, "FFFFFF", "000000")
-Gui, Main:Add, Edit, xm+780 ym+80 w185 Center Border vDsp HwndDsp_ -E0x200 gClearDsp Hidden
-CtlColors.Attach(Dsp_, "FFFFFF", "000000")
-Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV2 HwndHLV BackgroundDCFCF9 Hidden gEdit, Barcode|Name|Quantity|Price
-;ThisInst := New LV_Colors(HLV)
-;ThisInst.SelectionColors("0x00FF00", "0x000000")
-
-Gui, Main:Default
-Gui, Main:ListView, LV2
-LV_ModifyCol(1, "185 Center")
-LV_ModifyCol(2, "192 Center")
-LV_ModifyCol(3, "192 Center")
-LV_ModifyCol(4, "186 Center")
-; ==========================================================================================================
-
-; StockPile Controls
-StockPileCtrlList := "Pnm,Pqn,PSum,LV3,StockSum"
-Gui, Main:Font, s25
-Gui, Main:Add, Edit, xm+205 ym+50 w253 Center vPnm HwndPnm_ -E0x200 Hidden
-CtlColors.Attach(Pnm_, "E6E6E6", "000000")
-Gui, Main:Add, Edit, xm+458 ym+50 w253 Center vPqn HwndPqn_ -E0x200 Hidden
-CtlColors.Attach(Pqn_, "E6E6E6", "0000FF")
-Gui, Main:Add, Edit, xm+711 ym+50 w253 Center vPSum HwndPSum_ -E0x200 Hidden ReadOnly
-CtlColors.Attach(PSum_, "E6E6E6", "000000")
-Gui, Main:Add, Edit, xm+585 ym+300 w253 Center vStockSum HwndStockSum_ -E0x200 Hidden ReadOnly
-CtlColors.Attach(StockSum_, "FFFFFF", "FF0000")
-Gui, Main:Font, s15
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV3 BackgroundF4FCDC HwndHLV gDisplayQn Hidden, Barcode|Name|Quantity|ThisSum
-;ThisInst := New LV_Colors(HLV)
-;ThisInst.SelectionColors("0x00FF00", "0x000000")
-
-Gui, Main:Default
-Gui, Main:ListView, LV3
-LV_ModifyCol(1, "0 Center")
-LV_ModifyCol(2, "377 Center")
-LV_ModifyCol(3, "380 Center")
-LV_ModifyCol(4, "380 Center")
-; ==========================================================================================================
-
-; Profit Controls
-ProfitCtrlList := "SPr,CPr,OAProfit,LV4"
-Gui, Main:Font, s15
-
-Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV4 BackgroundFCDCDC HwndHLV gDisplayQn Hidden, Date|BP|SP|Pr
-;ThisInst := New LV_Colors(HLV)
-;ThisInst.SelectionColors("0x00FF00", "0x000000")
-
-Gui, Main:Add, Edit, xm+776 ym+90 -E0x200 ReadOnly vOAProfit w189 Hidden Center cRed Border HwndE
-CtlColors.Attach(E, "00FF00", "000000")
-Gui, Main:Add, Edit, xm+586 ym+90 -E0x200 ReadOnly vCPr w189 Hidden Center cRed Border HwndE
-CtlColors.Attach(E, "FF8080", "000000")
-Gui, Main:Add, Edit, xm+396 ym+90 -E0x200 ReadOnly vSPr w189 Hidden Center cRed Border HwndE
-CtlColors.Attach(E, "00FF00", "000000")
-
-Gui, Main:Default
-Gui, Main:ListView, LV4
-LV_ModifyCol(1, "189 Center")
-LV_ModifyCol(2, "189 Center")
-LV_ModifyCol(3, "189 Center")
-LV_ModifyCol(4, "189 Center")
-; ==========================================================================================================
-
-Gui, Main:Default
-Gui, Main:ListView, LV0
-
-Gui, Main:Show, % "x" 5 " y" 0 " w" A_ScreenWidth - 20 " h" A_ScreenHeight - 55
-
-ProductBase := DB_Read("Sets\PD.db")
-
-Gosub, OpenMain
-
-LastMDate := ""
-Table := ["A", "B", "C", "D", "E", "F"]
-
-SetTimer, Update, 250
-
-FileGetTime, PBMData, Sets\PD.db, M
-
-Global ProdDefs
-If FileExist("Sets\PD.db")
-    ProdDefs := LoadDefinitions(DB_Read("Sets\PD.db"))
-HLM := 1
-Gui, Main:Submit, NoHide
-SessionID := "OpenSess"
-If FileExist("Dump\" SessionID ".db")
-    RestoreSession(DB_Read("Dump\" SessionID ".db"))
-
-If (DB_Read("Sets\Vr.db") != Version()) {
-    Gui, Info:-SysMenu
-    Gui, Info:Font, s15 Bold, Consolas
-    Gui, Info:Add, Text, x0 y10 w400 ReadOnly cRed Center vTitle, % "Bilan mta3 version " Version()
-    Gui, Info:Font, s12
-    Gui, Info:Add, Edit, x0 y50 h400 w400 ReadOnly Center HwndE, % "Awel 7aja n7eb ngoulha hiya fenetre "
-                                                                 . "hadhi bech dema tadhher fi koll mis a jour jdid"
-                                                                 . " w ken t7eb tna7iha mech mochkla"
-                                                                 . "`n`n7wayej li mil mafroudh tsal7ou:"
-                                                                 . "`n1 - Calcul mta3 arba7 (ken thamma zeroat)"
-                                                                 . "`n2 - 3amlan page jdida el tasjil el bi3an"
-                                                                 . "`n`n7wayej li mil mafroudh walou a7san:"
-                                                                 . "`n1 - Ki teskani martin nafs 7aja mara lawla tenzd lil lista w ba3din twali tzid ken el kimia"
-                                                                 . "`n2 - Affichange mta3 lista li fi sabban essel3a walla mrateb (m s8ir lil kbir)"
-                                                                 . "`n3 - Ki tzid barcode yabda deja mawjoud el barnamij automatic ihizzik gdah"
-                                                                 . "`n`n7aja zedtha:"
-                                                                 . "`n1 - recherche fil menu mta3 sabban essel3a"
-                                                                 . "`nSahil yasser iste3mala, ekteb men fog (Kima bech tsob sel3a jdida) chnoi t7eb twem fi barcod willa esm willa 7ata lo5rin, ba3din cliki [Ctrl + F] iwali idhahrellek lista mta3 sel3a masbouba li fiha haka li t7awem 3lih"
-                                                                 . "`n`n7wayej nchallah bech nzidhom:"
-                                                                 . "`n1 - boutonat el kol 5dema fi testa3mil fiha clavier"
-                                                                 . "`n2 - tsawir lil grafique mta3 barnamij"
-                                                                 . "`n3 - statistic mfassal lil arba7 fih b detail ach tba3 w bgedech w wagtech ila5 ila5..."
-                                                                 . "`n4 - 3amlan option el terji3 essel3a"
-                                                                 . "`n`nMouch akid yet3emlou fi mis a jour jay ama fi agrab wa9t nchallah."
-                                                                 . "`nClicki OK bech tsaker el fenetre"
+    RMS := "#0"
+    Gui, Main:+Resize
+    Gui, Main:Font, s13
+    Gui, Main:Add, Button, x0 y10 HwndBtn w199 h40 gOpenMain Disabled Hidden vBtn1, % _4
+    ImageButton.Create(Btn, LMBTN*)
+    Gui, Main:Add, Button, x0 y50 HwndBtn w199 h40 gSubmit vBtn2 Hidden, % _8
+    ImageButton.Create(Btn, LMBTN*)
+    Gui, Main:Add, Button, x0 y90 HwndBtn w199 h40 gDefine vBtn3 Hidden, % _5
+    ImageButton.Create(Btn, LMBTN*)
+    Gui, Main:Add, Button, x0 y130 HwndBtn w199 h40 gStockPile vBtn4 Hidden, % _6
+    ImageButton.Create(Btn, LMBTN*)
+    Gui, Main:Add, Button, x0 y170 HwndBtn w199 h40 gProf vBtn5 Hidden, % _7
+    ImageButton.Create(Btn, LMBTN*)
+    Gui, Main:Add, Button, x0 y210 HwndBtn w199 h40 gManage vBtn6 Hidden, % "Management"
+    ImageButton.Create(Btn, LMBTN*)
+    Gui, Main:Add, Edit, xm ym+150 vTU w178 Center Border -E0x200 HwndE
     CtlColors.Attach(E, "FFFFFF", "000000")
-    Gui, Info:Add, Button, x10 y460 w380 HwndBtn, OK
+    Gui, Main:Add, Edit, xm+200 ym+150 vTP w178 Center Border -E0x200 Password HwndE
+    CtlColors.Attach(E, "FFFFFF", "FF0000")
+    Gui, Main:Add, Button, xm ym+150 w178 HwndBtn vReload gReload, Reload
     ImageButton.Create(Btn, GreenBTN*)
-    Gui, Info:Show, w400 h500, % " "
-    GuiControl, Info:Focus, Title
-    DB_Write("Sets\Vr.db", Version())
-}
+    GuiControl, Main:Hide, Reload
+    MainCtrlList := "Bc,$CB,Nm,Stck,Qn,Sum,LV0,ThisListSum,$GivenMoney,$AllSum,$Change,$ItemsSold,$SoldP,$ProfitP"
+    Gui, Main:Font, s25, Consolas
+    Gui, Main:Add, Edit, xm y500 HwndE w175 vItemsSold -E0x200 Hidden ReadOnly Center Border, 0
+    CtlColors.Attach(E, "D8D8AD", "000000")
+    Gui, Main:Add, Edit, xm y528 HwndE w175 vSoldP -E0x200 Hidden ReadOnly Center Border, 0
+    CtlColors.Attach(E, "D8D8AD", "008000")
+    Gui, Main:Add, Edit, xm y556 HwndE w175 vProfitP -E0x200 Hidden ReadOnly Center Border, 0
+    CtlColors.Attach(E, "D8D8AD", "FF0000")
+    Ind := "", Xb := 217
+    Gui, Main:Font, s25 Bold, Calibri
+    Gui, Main:Add, Edit, xm+380 ym+10 w250 -VScroll vBc Center -E0x200 gAnalyzeAvail Border HwndBc_ Hidden
+    CtlColors.Attach(Bc_, "FFFFFF", "008000")
+    GuiControlGet, ThisPos, Main:Pos, Bc
+    ThisPosX -= 10
+    Gui, Main:Add, ComboBox, xm+%ThisPosX% ym+58 w250 vCB r10 Simple 0x100 Center gChooseItem HwndLB_ Hidden ReadOnly
+    CtlColors.Attach(LB_, "FFFFFF", "008000")
+    Gui, Main:Add, Edit, xm+205 ym+10 w175 vStck -E0x200 ReadOnly HwndE Center Hidden
+    CtlColors.Attach(E, "D8D8AD", "FF0000")
+    Gui, Main:Add, Edit, xm+205 ym+70 w250 vNm -E0x200 ReadOnly HwndNm Center Hidden
+    CtlColors.Attach(Nm, "FFFFFF", "000080")
+    Gui, Main:Add, Edit, xm+455 ym+70 w260 vQn Center -E0x200 ReadOnly HwndQn gAnalyzeQn Hidden, x1
+    CtlColors.Attach(Qn, "FFFFFF", "008000")
+    Gui, Main:Add, Edit, xm+715 ym+70 w250 vSum -E0x200 ReadOnly HwndSum Center Hidden
+    CtlColors.Attach(Sum, "FFFFFF", "800000")
+    Gui, Main:Add, Edit, xm+715 ym+370 w250 vThisListSum -E0x200 Border ReadOnly HwndThisListSum Center Hidden
+    CtlColors.Attach(ThisListSum, "FCEFDC", "800000")
+    Gui, Main:Font, s15
+    Loop, 7 {
+        Gui, Main:Add, Button, xm+%Xb% ym+300 w25 h25 vOpenSess%Ind% HwndOpenSess%Ind%_ gUpdateSession Center Hidden, % A_Index
+        MainCtrlList .= ",OpenSess" Ind
+        ImageButton.Create(OpenSess%Ind%_, BMBTN*)
+        Ind := A_Index
+        Xb += 25
+    }
+    GuiControl, Main: Disabled, OpenSess
+    Gui, Main:Font, s50
+    Gui, Main:Add, Edit, xm+205 ym+10 w254 vGivenMoney -E0x200 gCalc Center Hidden
+    Gui, Main:Add, Edit, xm+460 ym+10 w254 vAllSum HwndAS -E0x200 ReadOnly Center Hidden
+    CtlColors.Attach(AS, "FFFFFF", "008000")
+    Gui, Main:Add, Edit, xm+715 ym+10 w252 vChange HwndC -E0x200 ReadOnly Center Hidden
+    CtlColors.Attach(C, "FFFFFF", "FF0000")
+    Gui, Main:Font, s25
+    Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV0 BackgroundFCEFDC HwndHLV Hidden -Multi, Barcode|QN|Name|Quantity|Price
+    Gui, Main:Default
+    Gui, Main:ListView, LV0
+    LV_ModifyCol(1, "0 Center")
+    LV_ModifyCol(2, "180")
+    LV_ModifyCol(3, "234 Center")
+    LV_ModifyCol(4, "232 Center")
+    LV_ModifyCol(5, "230 Center")
+    EnsureCtrlList := "LV1,EnsBtn,Sold,Bought,ProfitEq"
+    Gui, Main:Font, s25
+    Gui, Main:Add, Button, xm+205 ym+30 vEnsBtn w760 h80 hwndBtn Hidden gValid, % _9
+    ImageButton.Create(Btn, EBTN*)
+    Gui, Main:Font, s15
+    Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV1 BackgroundDEFCDC HwndHLV Hidden -Multi, FN|SO
+    Gui, Main:Default
+    Gui, Main:ListView, LV1
+    LV_ModifyCol(1, "0")
+    LV_ModifyCol(2, "760 Center")
+    Gui, Main:Font, s40
+    Gui, Main:Add, Edit, xm+206 ym+430 w260 vSold Center -E0x200 ReadOnly HwndE gAnalyzeQn Hidden
+    CtlColors.Attach(E, "00FF00", "000000")
+    Gui, Main:Add, Edit, xm+456 ym+430 w260 vBought -E0x200 ReadOnly HwndE Center Hidden
+    CtlColors.Attach(E, "FF8080", "000000")
+    Gui, Main:Add, Edit, xm+716 ym+430 w260 vProfitEq -E0x200 ReadOnly HwndE Center Hidden
+    CtlColors.Attach(E, "00FF00", "000000")
+    Gui, Main:Font, s15
+    DefineCtrlList := "Dbc,Dnm,Dbp,Dsp,LV2"
+    Gui, Main:Add, Edit, xm+205 ym+80 w185 Center Border vDbc HwndDbc_ -E0x200 gClearDbc Hidden
+    CtlColors.Attach(Dbc_, "FFFFFF", "000000")
+    Gui, Main:Add, Edit, xm+396 ym+80 w185 Center Border vDnm HwndDnm_ -E0x200 gClearDnm Hidden
+    CtlColors.Attach(Dnm_, "FFFFFF", "000000")
+    Gui, Main:Add, Edit, xm+589 ym+80 w185 Center Border vDbp HwndDbp_ -E0x200 gClearDbp Hidden
+    CtlColors.Attach(Dbp_, "FFFFFF", "000000")
+    Gui, Main:Add, Edit, xm+780 ym+80 w185 Center Border vDsp HwndDsp_ -E0x200 gClearDsp Hidden
+    CtlColors.Attach(Dsp_, "FFFFFF", "000000")
+    Gui, Main:Font, s15
+    Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV2 HwndHLV2 BackgroundDCFCF9 Hidden gEdit, Barcode|Name|Quantity|Price
+    Gui, Main:Default
+    Gui, Main:ListView, LV2
+    LV_ModifyCol(1, "185 Center")
+    LV_ModifyCol(2, "192 Center")
+    LV_ModifyCol(3, "192 Center")
+    LV_ModifyCol(4, "186 Center")
+    StockPileCtrlList := "Pnm,Pqn,PSum,LV3,StockSum"
+    Gui, Main:Font, s25
+    Gui, Main:Add, Edit, xm+205 ym+50 w253 Center vPnm HwndPnm_ -E0x200 Hidden
+    CtlColors.Attach(Pnm_, "E6E6E6", "000000")
+    Gui, Main:Add, Edit, xm+458 ym+50 w253 Center vPqn HwndPqn_ -E0x200 Hidden
+    CtlColors.Attach(Pqn_, "E6E6E6", "0000FF")
+    Gui, Main:Add, Edit, xm+711 ym+50 w253 Center vPSum HwndPSum_ -E0x200 Hidden ReadOnly
+    CtlColors.Attach(PSum_, "E6E6E6", "000000")
+    Gui, Main:Add, Edit, xm+585 ym+300 w253 Center vStockSum HwndStockSum_ -E0x200 Hidden ReadOnly
+    CtlColors.Attach(StockSum_, "FFFFFF", "FF0000")
+    Gui, Main:Font, s15
+    Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV3 BackgroundF4FCDC HwndHLV3 gDisplayQn Hidden -Multi, Barcode|Name|Quantity|ThisSum
+    Gui, Main:Default
+    Gui, Main:ListView, LV3
+    LV_ModifyCol(1, "0 Center")
+    LV_ModifyCol(2, "377 Center")
+    LV_ModifyCol(3, "380 Center")
+    LV_ModifyCol(4, "380 Center")
+    ProfitCtrlList := "SPr,CPr,OAProfit,LV4,Today,Yesterday"
+    Gui, Main:Font, s25
+    TodayDate := A_Now
+    Gui, Main:Add, DateTime, xm+205 ym+350 w345 vToday Choose%TodayDate% gDisplayEqProfit Hidden, yyyy.MM.dd | HH:mm:ss
+    TodayDate += -1, Days
+    Gui, Main:Add, DateTime, xm+605 ym+350 w345 vYesterday Choose%TodayDate% gDisplayEqProfit Hidden, yyyy.MM.dd | HH:mm:ss
+    Gui, Main:Font, s15
+    Gui, Main:Add, ListView, xm+205 ym+135 w760 r10 -Hdr Grid vLV4 BackgroundFCDCDC HwndHLV gDisplayQn Hidden -Multi, FN|Date|BP|SP|Pr
+    Gui, Main:Add, Edit, xm+776 ym+90 -E0x200 ReadOnly vOAProfit w189 Hidden Center cRed Border HwndE
+    CtlColors.Attach(E, "00FF00", "000000")
+    Gui, Main:Add, Edit, xm+586 ym+90 -E0x200 ReadOnly vCPr w189 Hidden Center cRed Border HwndE
+    CtlColors.Attach(E, "FF8080", "000000")
+    Gui, Main:Add, Edit, xm+396 ym+90 -E0x200 ReadOnly vSPr w189 Hidden Center cRed Border HwndE
+    CtlColors.Attach(E, "00FF00", "000000")
+    Gui, Main:Default
+    Gui, Main:ListView, LV4
+    LV_ModifyCol(1, "0")
+    LV_ModifyCol(2, "189 Center")
+    LV_ModifyCol(3, "189 Center")
+    LV_ModifyCol(4, "189 Center")
+    LV_ModifyCol(5, "189 Center")
+    ManageCtrlList := "UserName,UserPass,LV5"
+    Gui, Main:Add, Edit, xm+205 ym+10 w200 -E0x200 vUserName Hidden HwndE Border Right cRed
+    Gui, Main:Add, Edit, xm+405 ym+10 w200 -E0x200 vUserPass Hidden HwndE Border
+    Gui, Main:Add, ListView, xm+205 ym+50 w400 r10 -Hdr Grid vLV5 HwndHLV Hidden -Multi cBlue, N|P
+    Gui, Main:Default
+    Gui, Main:ListView, LV5
+    LV_ModifyCol(1, "198 Right")
+    LV_ModifyCol(2, "198")
+    Gui, Main:Font, s15
+    Gui, Main:Show, % "x" 5 " y" 0 " w" A_ScreenWidth - 20 " h" A_ScreenHeight - 80
 Return
-
+Continue:
+    Loop, Parse, % "124356"
+        GuiControl, Main:Show, Btn%A_LoopField%
+    Gui, Main:Default
+    Gui, Main:ListView, LV0
+    Gosub, OpenMain
+    LastMDate := ""
+    Table := ["A", "B", "C", "D", "E", "F"]
+    SetTimer, Update, 250
+    FileGetTime, PBMData, Sets\PD.db, M
+    Global ProdDefs
+    If FileExist("Sets\PD.db")
+        ProdDefs := LoadDefinitions(DB_Read("Sets\PD.db"))
+    HLM := 0
+    Gui, Main:Submit, NoHide
+    SessionID := "OpenSess"
+    If FileExist("Dump\" SessionID ".db")
+        RestoreSession(DB_Read("Dump\" SessionID ".db"))
+    If (DB_Read("Sets\Vr.db") != Version()) {
+        Gui, Info:-SysMenu
+        Gui, Info:Font, s15 Bold, Consolas
+        Gui, Info:Add, Text, x0 y10 w400 ReadOnly cRed Center vTitle, % "Bilan mta3 version " Version()
+        Gui, Info:Font, s12
+        Gui, Info:Add, Edit, x0 y50 h400 w400 ReadOnly Center HwndE, % "Awel 7aja n7eb ngoulha hiya fenetre "
+        . "hadhi bech dema tadhher fi koll mis a jour jdid"
+        . " w ken t7eb tna7iha mech mochkla"
+        . "`n`n7wayej li mil mafroudh tsal7ou:"
+        . "`n1 - Calcul mta3 arba7 (ken thamma zeroat)"
+        . "`n2 - 3amlan page jdida el tasjil el bi3an"
+        . "`n`n7wayej li mil mafroudh walou a7san:"
+        . "`n1 - Ki teskani martin nafs 7aja mara lawla tenzd lil lista w ba3din twali tzid ken el kimia"
+        . "`n2 - Affichange mta3 lista li fi sabban essel3a walla mrateb (m s8ir lil kbir)"
+        . "`n3 - Ki tzid barcode yabda deja mawjoud el barnamij automatic ihizzik gdah"
+        . "`n`n7aja zedtha:"
+        . "`n1 - recherche fil menu mta3 sabban essel3a"
+        . "`nSahil yasser iste3mala, ekteb men fog (Kima bech tsob sel3a jdida) chnoi t7eb twem fi barcod willa esm willa 7ata lo5rin, ba3din cliki [Ctrl + F] iwali idhahrellek lista mta3 sel3a masbouba li fiha haka li t7awem 3lih"
+        . "`n`n7wayej nchallah bech nzidhom:"
+        . "`n1 - boutonat el kol 5dema fi testa3mil fiha clavier"
+        . "`n2 - tsawir lil grafique mta3 barnamij"
+        . "`n3 - statistic mfassal lil arba7 fih b detail ach tba3 w bgedech w wagtech ila5 ila5..."
+        . "`n4 - 3amlan option el terji3 essel3a"
+        . "`n`nMouch akid yet3emlou fi mis a jour jay ama fi agrab wa9t nchallah."
+        . "`nClicki OK bech tsaker el fenetre"
+        CtlColors.Attach(E, "FFFFFF", "000000")
+        Gui, Info:Add, Button, x10 y460 w380 HwndBtn, OK
+        ImageButton.Create(Btn, GreenBTN*)
+        Gui, Info:Show, w400 h500, % " "
+        GuiControl, Info:Focus, Title
+        DB_Write("Sets\Vr.db", Version())
+    }
+    CoordMode, Mouse, Screen
+    OnMessage(0x200, "MouseHover")
+Return
+Reload:
+    Reload
+Return
+ChooseItem:
+    Gui, Main:Submit, NoHide
+    Bc := SubStr(CB, InStr(CB, " ",, 0) + 1)
+    GuiControl, Main:, Bc, % Trim(Bc, "[]")
+Return
+DisplayEqProfit:
+    Gui, Main:Submit, NoHide
+    If (Today >= Yesterday) {
+        OAPr := CP := SPr := 0
+        LV_Delete()
+        Loop, Files, Valid\*.db, R F
+        {
+            ThisDate := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3)
+            If ThisDate Between %Yesterday% and %Today%
+            {
+                RD := DB_Read(A_LoopFileFullPath)
+                If (RD) {
+                    Arr := CalcProfit(RD)
+                    If (!Arr[2][2]) {
+                        Correct(A_LoopFileFullPath)
+                        RD := DB_Read(A_LoopFileFullPath)
+                        Arr := CalcProfit(RD)
+                    }
+                    LV_Add("", A_LoopFileFullPath, Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
+                    SPr := Arr[2][1] + SPr
+                    CP := Arr[2][2] + CP
+                    OAPr := Arr[2][3] + OAPr
+                }
+            }
+        }
+        Loop, Files, Curr\*.db
+        {
+            ThisDate := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3)
+            If ThisDate Between %Yesterday% and %Today%
+            {
+                RD := DB_Read(A_LoopFileFullPath)
+                If (RD) {
+                    Arr := CalcProfit(RD)
+                    If (!Arr[2][2]) {
+                        Correct(A_LoopFileFullPath)
+                        RD := DB_Read(A_LoopFileFullPath)
+                        Arr := CalcProfit(RD)
+                    }
+                    LV_Add("", A_LoopFileFullPath, Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
+                    SPr := Arr[2][1] + SPr
+                    CP := Arr[2][2] + CP
+                    OAPr := Arr[2][3] + OAPr
+                }
+            }
+        }
+        GuiControl, Main:, OAProfit, % OAPr
+        GuiControl, Main:, SPr, % SPr
+        GuiControl, Main:, CPr, % CP
+    }
+Return
 UpdateSession:
     Gui, Main:Submit, NoHide
     Loop, Parse, % ",1,2,3,4,5,6", `,
         GuiControl, Main:Enable, % "OpenSess" A_LoopField
     GuiControl, Main:Disabled, % A_GuiControl
-    RegExMatch(A_GuiControl, "\d", Mark)
     SessionID := A_GuiControl
     If FileExist("Dump\" SessionID ".db")
         RestoreSession(DB_Read("Dump\" SessionID ".db"))
@@ -329,77 +1115,86 @@ UpdateSession:
         }
         LV_Delete()
     }
+    GuiControl, Main:Hide, GivenMoney
+    GuiControl, Main:Hide, AllSum
+    GuiControl, Main:Hide, Change
+    GuiControl, Main:Hide, CB
+    GuiControl, Main:Show, Bc
+    GuiControl, Main:Show, Nm
+    GuiControl, Main:Show, Qn
+    GuiControl, Main:Show, Sum
+    GuiControl, Main:Show, Stck
 Return
-
 InfoButtonOK:
     Gui, Info:Destroy
 Return
-
 :*C:LetAppRunOnThisMachine::
-    ADMUsername := ADMPassword := ""
-    GuiControl, Main:, PassString, Create ADM username
+    If (RMS = "#-1") {
+        Pass := 1
+        ADMUsername := ADMPassword := ""
+        GuiControl, Main:, PassString, Create ADM username
+    }
 Return
-
 MainGuiSize:
     WinGetPos,,, Width, Height, % "ahk_id " Main
-    Height -= 10
+    Height -= 35
     GuiControl, Main:Move, % "TText", % "w" Width
     GuiControl, Main:Move, % "Prt1", % "y" Height - 55 " w" Width - 199
     GuiControl, Main:Move, % "Prt2", % "y" Height - 55
     GuiControl, Main:Move, % "Prt3", % "y" Height - 60 " w" Width
-    GuiControl, Main:Move, % "Prt4", % " h" Height - 70
-    Loop, 4 {
+    GuiControl, Main:Move, % "Prt4", % "h" Height - 70
+    GuiControl, Main:Move, % "Prt5", % "x" Width - 57 " y" Height - 45
+    Loop, 5 {
         GuiControl, Main:+Redraw, % "Prt" A_Index
     }
-
+    If (RMS = "#0") {
+        GuiControl, Main:Move, TU, % "y" Height - 45
+        GuiControl, Main:+Redraw, TU
+        GuiControl, Main:Move, TP, % "y" Height - 45
+        GuiControl, Main:+Redraw, TP
+    }
     Width -= 30
-    GuiControl, Main:Move, % "Ver", % "y" Height - 47
-    GuiControl, Main:+Redraw, % "Ver"
-
-    InitY := 108
-    GuiControl, Main:Move, % "ItemsSold", % "y" Height - InitY - (50 * 2)
-    GuiControl, Main:Move, % "SoldP", % "y" Height - InitY - 50
-    GuiControl, Main:Move, % "ProfitP", % "y" Height - InitY
-    GuiControl, Main:+Redraw, % "ItemsSold"
-    GuiControl, Main:+Redraw, % "SoldP"
-    GuiControl, Main:+Redraw, % "ProfitP"
-
     Third := (Width - 217) // 3
-
+    If (RMS != "#0") {
+        GuiControl, Main:Move, Reload, % "y" Height - 45
+        GuiControl, Main:+Redraw, Reload
+    }
     If (RMS = "#1") {
-    ; #1
+        InitY := 108
+        GuiControl, Main:Move, % "ItemsSold", % "y" Height - InitY - (50 * 2)
+        GuiControl, Main:Move, % "SoldP", % "y" Height - InitY - 50
+        GuiControl, Main:Move, % "ProfitP", % "y" Height - InitY
         GuiControl, Main:Move, % "Bc", % "w" Third
+        GuiControl, Main:Move, % "CB", % "w" Third
         GuiControl, Main:Move, % "Nm", % "w" Third
         GuiControl, Main:Move, % "Qn", % "x" Third + 217 " w" Third
         GuiControl, Main:Move, % "Sum", % "x" (Third * 2) + 217 " w" Third
-
         GuiControl, Main:Move, % "LV0", % "w" (Third * 3) " h" Height - 260
-
+        GuiControl, Main:Move, % "ThisListSum", % "x" (Third * 2) + 217 " y" Height - 118 " w" Third
+        GuiControl, Main:+Redraw, % "Offer"
+        GuiControl, Main:+Redraw, % "Discount"
+        GuiControl, Main:+Redraw, % "Percent"
+        GuiControl, Main:+Redraw, % "ThisListSum"
         Gui, Main:ListView, LV0
-        LV_ModifyCol(2, (Val := Third) - 1)
-        LV_ModifyCol(3, Val - 2)
-        LV_ModifyCol(4, Val - 1)
-
+        LV_ModifyCol(3, (Val := Third) - 61)
+        LV_ModifyCol(4, Val - 62)
+        LV_ModifyCol(5, Val - 61)
         GuiControl, Main:Move, % "GivenMoney", % "w" Third
         GuiControl, Main:Move, % "AllSum", % "x" Third + 217 " w" Third
         GuiControl, Main:Move, % "Change", % "x" (Third * 2) + 217 " w" Third
-
-        GuiControl, Main:Move, % "OpenSess", % "x" 216 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess"
-        GuiControl, Main:Move, % "OpenSess" 1, % "x" 319 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess" 1
-        GuiControl, Main:Move, % "OpenSess" 2, % "x" 421 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess" 2
-        GuiControl, Main:Move, % "OpenSess" 3, % "x" 523 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess" 3
-        GuiControl, Main:Move, % "OpenSess" 4, % "x" 625 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess" 4
-        GuiControl, Main:Move, % "OpenSess" 5, % "x" 727 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess" 5
-        GuiControl, Main:Move, % "OpenSess" 6, % "x" 829 " y" Height - 108
-        GuiControl, Main:+Redraw, % "OpenSess" 6
+        ThisY := Height - 85
+        GuiControl, Main:Move, % "OpenSess", % "x" 217 " y" ThisY
+        GuiControl, Main:Move, % "OpenSess" 1, % "x" 243 " y" ThisY
+        GuiControl, Main:Move, % "OpenSess" 2, % "x" 269 " y" ThisY
+        GuiControl, Main:Move, % "OpenSess" 3, % "x" 295 " y" ThisY
+        GuiControl, Main:Move, % "OpenSess" 4, % "x" 321 " y" ThisY
+        GuiControl, Main:Move, % "OpenSess" 5, % "x" 347 " y" ThisY
+        GuiControl, Main:Move, % "OpenSess" 6, % "x" 373 " y" ThisY
+        If (Loaded) {
+            Loop, Parse, % ",1,2,3,4,5,6", `,
+                GuiControl, Main:+Redraw, % "OpenSess" A_LoopField
+        }
     } Else If (RMS = "#2") {
-    ; #2
         GuiControl, Main:Move, % "EnsBtn", % "w" (Third * 3)
         GuiControl, Main:, % "EnsBtn", % _9
         GuiControlGet, Btn, Main:Hwnd, EnsBtn
@@ -407,20 +1202,16 @@ MainGuiSize:
         GuiControl, Main:+Redraw, % "EnsBtn"
         GuiControl, Main:Move, % "LV1", % "w" (Third * 3) " h" Height - 300
         Gui, Main:ListView, LV1
-        LV_ModifyCol(1, (Third * 3) - 5)
-
+        LV_ModifyCol(2, (Third * 3) - 22)
         GuiControl, Main:Move, % "Sold", % "y" Height - 150 " w" Third
         GuiControl, Main:Move, % "Bought", % "x" Third + 217 " y" Height - 150 " w" Third
         GuiControl, Main:Move, % "ProfitEq", % "x" (Third * 2) + 217 " y" Height - 150 " w" Third
-
     } Else If (RMS = "#3") {
-    ; #3
         Quarter := (Width - 217) // 4
         GuiControl, Main:Move, % "Dbc", % "w" Quarter
         GuiControl, Main:Move, % "Dnm", % "x" Quarter + 217 " w" Quarter
         GuiControl, Main:Move, % "Dbp", % "x" (Quarter * 2) + 217 " w" Quarter
         GuiControl, Main:Move, % "Dsp", % "x" (Quarter * 3) + 217 " w" Quarter
-
         GuiControl, Main:Move, % "LV2", % "w" (Quarter * 4) " h" Height - 220
         Gui, Main:ListView, LV2
         LV_ModifyCol(1, (Val := Quarter) - 2)
@@ -428,7 +1219,6 @@ MainGuiSize:
         LV_ModifyCol(3, Val)
         LV_ModifyCol(4, Val - 1)
     } Else If (RMS = "#4") {
-    ; #4
         GuiControl, Main:Move, % "Pnm", % "w" Third
         GuiControl, Main:Move, % "Pqn", % "x" Third + 217 " w" Third
         GuiControl, Main:Move, % "Psum", % "x" (Third * 2) + 217 " w" Third
@@ -439,24 +1229,32 @@ MainGuiSize:
         LV_ModifyCol(3, Val - 1)
         LV_ModifyCol(4, Val - 1)
     } Else If (RMS = "#5") {
-    ; #4
         Quarter := (Width - 217) // 4
-        ; SPr,CPr,OAProfit
         GuiControl, Main:Move, % "SPr", % "x" Quarter + 217 " w" Quarter
         GuiControl, Main:Move, % "CPr", % "x" (Quarter * 2) + 217 " w" Quarter
         GuiControl, Main:Move, % "OAProfit", % "x" (Quarter * 3) + 217 "w" Quarter
-
-        GuiControl, Main:Move, % "LV4", % "w" (Quarter * 4) " h" Height - 220
+        GuiControl, Main:Move, % "Today", % "x" 217 " y" Height - 115
+        GuiControl, Main:Move, % "Yesterday", % "x" Width - 350 " y" Height - 115
+        GuiControl, Main:Move, % "LV4", % "w" (Quarter * 4) " h" Height - 260
         Gui, Main:ListView, LV4
-        LV_ModifyCol(1, (Val := Quarter) - 3)
-        LV_ModifyCol(2, Val)
+        LV_ModifyCol(2, (Val := Quarter) - 3)
         LV_ModifyCol(3, Val)
-        LV_ModifyCol(4, Val - 1)
+        LV_ModifyCol(4, Val)
+        LV_ModifyCol(5, Val - 1)
+    } Else If (RMS = "#6") {
+        GuiControl, Main:Move, % "LV5", % "h" Height - 140
     }
 Return
-
 Update:
     If WinActive("ahk_id " Main) {
+        If (Level = "User") {
+            Loop, 5 {
+                GuiControlGet, Enb, Main:Enabled, % "Btn" A_Index + 1
+                If (Enb) {
+                    GuiControl, Main:Disabled, % "Btn" A_Index + 1
+                }
+            }
+        }
         FileGetTime, ThisMData, Curr, M
         If (ThisMData != LastMDate) {
             Nb := SPr := OAPr := 0
@@ -475,123 +1273,126 @@ Update:
             GuiControl, Main:, ProfitP, % OAPr
             LastMDate := ThisMData
         }
-
         If FileExist("Sets\PD.db") {
             FileGetTime, _ThisMData, Sets\PD.db, M
-            If (PBMData != ThisMData) {
+            If (PBMData != _ThisMData) {
                 ProdDefs := LoadDefinitions(DB_Read("Sets\PD.db"))
+                PBMData := _ThisMData
             }
         }
-
         If (RMS = "#1") {
-            GuiControlGet, Visi, Main:Visible, Nm
+            GuiControlGet, Visi, Main:Visible, CB
             If (Visi) {
-                GuiControlGet, Foc, Main:Focus
-                If !(Foc ~= "bEdit1|SysListView321|Button\d+\b") {
-                    GuiControl, Main:Focus, Bc
+                GuiControlGet, ThisFocus, Main:FocusV
+                If (ThisFocus != "CB") {
+                    GuiControl, Main:Hide, CB
+                }
+                MouseGetPos,,,, OutputVarControl
+                If !(OutputVarControl ~= "Edit7|ComboLBox1") {
+                    GuiControl, Main:+Redraw, CB
                 }
             }
         }
     }
 Return
-
 OpenMain:
     RMS := "#1"
     Gosub, MainGuiSize
-    Loop, Parse, % "12435"
+    Loop, Parse, % "124356"
         GuiControl, Main:Disabled, Btn%A_LoopField%
-    Hide(EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
+    Hide(EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList "," ManageCtrlList)
     Show(MainCtrlList)
     Gui, Main:ListView, LV0
     Gui, Main:Submit, NoHide
-    ;CheckSession(OpenSess)
-    Loop, Parse, % "2435"
+    Loop, Parse, % "24356"
         GuiControl, Main:Enabled, Btn%A_LoopField%
-
     If FileExist("Dump\" SessionID ".db")
         RestoreSession(DB_Read("Dump\" SessionID ".db"))
+    GuiControl, Main:Focus, Bc
 Return
-
 Submit:
     RMS := "#2"
     Gosub, MainGuiSize
-    Loop, Parse, % "12435"
+    Loop, Parse, % "124356"
         GuiControl, Main:Disabled, Btn%A_LoopField%
-    Hide(MainCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
+    Hide(MainCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList "," ManageCtrlList)
     Show(EnsureCtrlList)
     Gui, Main:ListView, LV1
     GuiControl, Main:Enabled, EnsBtn
     LoadCurrent()
-    Loop, Parse, % "1234"
+    Loop, Parse, % "13456"
         GuiControl, Main:Enabled, Btn%A_LoopField%
 Return
-
 Define:
     RMS := "#3"
     Gosub, MainGuiSize
-    Loop, Parse, % "12435"
+    Loop, Parse, % "124356"
         GuiControl, Main:Disabled, Btn%A_LoopField%
-    Hide(MainCtrlList "," EnsureCtrlList "," StockPileCtrlList "," ProfitCtrlList)
+    Hide(MainCtrlList "," EnsureCtrlList "," StockPileCtrlList "," ProfitCtrlList "," ManageCtrlList)
     Show(DefineCtrlList)
     Gui, Main:ListView, LV2
     LoadDefined()
-    Loop, Parse, % "1435"
+    Loop, Parse, % "12456"
         GuiControl, Main:Enabled, Btn%A_LoopField%
 Return
-
 StockPile:
     RMS := "#4"
     Gosub, MainGuiSize
-    Loop, Parse, % "12435"
+    Loop, Parse, % "124356"
         GuiControl, Main:Disabled, Btn%A_LoopField%
-    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," ProfitCtrlList)
+    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," ProfitCtrlList "," ManageCtrlList)
     Show(StockPileCtrlList)
     Gui, Main:ListView, LV3
     LoadStockList()
-    Loop, Parse, % "1245"
+    Loop, Parse, % "12356"
         GuiControl, Main:Enabled, Btn%A_LoopField%
 Return
-
 Prof:
     RMS := "#5"
     Gosub, MainGuiSize
-    Loop, Parse, % "12435"
+    Loop, Parse, % "123456"
         GuiControl, Main:Disabled, Btn%A_LoopField%
-    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList)
+    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList "," ManageCtrlList)
     Show(ProfitCtrlList)
     Gui, Main:ListView, LV4
     LoadProf()
-    Loop, Parse, % "1235" 
+    Loop, Parse, % "12346"
         GuiControl, Main:Enabled, Btn%A_LoopField%
 Return
-
+Manage:
+    RMS := "#6"
+    Gosub, MainGuiSize
+    Loop, Parse, % "123456"
+        GuiControl, Main:Disabled, Btn%A_LoopField%
+    Hide(MainCtrlList "," EnsureCtrlList "," DefineCtrlList "," StockPileCtrlList "," ProfitCtrlList)
+    Show(ManageCtrlList)
+    Gui, Main:ListView, LV5
+    LoadAccounts()
+    Loop, Parse, % "12345"
+        GuiControl, Main:Enabled, Btn%A_LoopField%
+    GuiControl, Main:Focus, UserName
+Return
 Edit:
     LV_GetText(EBc, Row := LV_GetNext(), 1)
-    EditMod := [1, Row]
+    EditMod := [1, EBc]
     LV_GetText(ENm, Row, 2)
     LV_GetText(EBp, Row, 3)
     LV_GetText(ESp, Row, 4)
-
     GuiControl, Main:, Dbc, % EBc
     GuiControl, Main:, Dnm, % ENm
     GuiControl, Main:, Dbp, % EBp
     GuiControl, Main:, Dsp, % ESp
 Return
-
 Calc:
     Gui, Main:Submit, NoHide
-    GuiControl, Main:, Msg
     GuiControl, Main:, Change
     If GivenMoney is not Digit
     {
-        GuiControl, Main:, Msg, Warning: The given money input should not contain anything but digits!
-        Return
-    }
-    If (GivenMoney >= AllSum) {
+        ShakeControl("Main", GivenMoney)
+    } Else If (GivenMoney >= AllSum) {
         GuiControl, Main:, Change, % GivenMoney - AllSum
     }
 Return
-
 Valid:
     FileCreateDir, % "Valid\" Now := A_Now
     FileMove, % "Curr\*.db", % "Valid\" Now
@@ -602,33 +1403,31 @@ Valid:
     GuiControl, Main:, Bought
     GuiControl, Main:, ProfitEq
 Return
-
 DisplayQn:
     LV_GetText(Sqn, Row := LV_GetNext(), 3)
     LV_GetText(Snm, Row, 2)
     LV_GetText(Sid, Row, 1)
     LV_GetText(Ssum, Row, 4)
-    GuiControl, Main:, Pqn, % Sqn 
+    GuiControl, Main:, Pqn, % Sqn
     GuiControl, Main:, Pnm, % Snm
     GuiControl, Main:, Psum, % Ssum
     SelectionQn := Sid
-    GuiControl, Main:Focus, Pnm
-    PostMessage, 0xB1, 0, -1,, % "ahk_id " Pnm_
+    GuiControl, Main:Focus, Pqn
+    PostMessage, 0xB1, 0, -1,, % "ahk_id " Pqn_
+    EditStock := 1
 Return
-
 ClearDbc:
     Gui, Main:Submit, NoHide
     CtlColors.Change(Dbc_, "FFFFFF", "000000")
-    If (Dbc ~= "[^0-9]") {
+    If (Dbc ~= "[^0-9A-Za-z]") {
         CtlColors.Change(Dbc_, "FF8080", "000000")
         ShakeControl("Main", "Dbc")
     }
 Return
-
 ClearDnm:
     Gui, Main:Submit, NoHide
     CtlColors.Change(Dnm_, "FFFFFF", "000000")
-    If (Dnm ~= "\[|\]|\;|\$") {
+    If (Dnm ~= "\[|\]|\;|\$|\||\/") {
         CtlColors.Change(Dnm_, "FF8080", "000000")
     ShakeControl("Main", "Dnm")
 }
@@ -651,13 +1450,83 @@ ClearDsp:
 Return
 
 #If WinActive("ahk_id " Main)
+^s::
+    If (RMS="#3") {
+        Gui, Main:Submit, NoHide
+        Gui, Main:Default
+        If (Row := LV_GetNext()) {
+            NRow := 0, TmpArr := []
+            While (NRow != Row) {
+                If (A_Index = 1)
+                    NRow := Row
+                If (NRow) {
+                    LV_GetText(Bc, NRow, 1)
+                    TmpArr.Push(Bc)
+                }
+                NRow := LV_GetNext(NRow)
+            }
+            If (TmpArr.MaxIndex() >= 2) {
+                NotAlreadyDefined := 1
+                For All, Things in TmpArr {
+                    If (ProdDefs["" Things ""][5]) {
+                        NotAlreadyDefined := 0
+                        Break
+                    }
+                }
+                StockedTogether := ""
+                If (NotAlreadyDefined) {
+                    SetQn := ProdDefs["" TmpArr[1] ""][4] ? ProdDefs["" TmpArr[1] ""][4] : 0
+                    For Each, One in TmpArr {
+                        StockedTogether .= "| " ProdDefs["" One ""][1] " |"
+                        ProdDefs["" One ""][4] := SetQn
+                        ProdDefs["" One ""][5] := AllButThis(TmpArr, One)
+                    }
+                    MsgBox, 64, Applied, The next list of products are added to the same stock option:`n`n%StockedTogether%`n`nStock = %SetQn%
+                } Else {
+                    For Each, One in TmpArr {
+                        For _Each, _One in ProdDefs {
+                            If InStr(_One[5], One) {
+                                ProdDefs["" _Each ""][5] := RemoveBC(ProdDefs["" _Each ""][5], One)
+                            }
+                        }
+                        ProdDefs["" One ""][5] := ""
+                        StockedTogether .= "| " ProdDefs["" One ""][1] " |"
+                    }
+                    MsgBox, 64, Applied, The next list of products are removed from the same stock option:`n`n%StockedTogether%
+                }
+                UpdateProdDefs()
+            }
+        }
+    }
+Return
+#If
+
+#If WinActive("ahk_id " Main)
+Esc::
+    If (RMS="#1") {
+        GuiControlGet, Visi, Main:Visible, Nm
+        If (!Visi) {
+            GuiControl, Main:Hide, GivenMoney
+            GuiControl, Main:Hide, AllSum
+            GuiControl, Main:Hide, Change
+            GuiControl, Main:Hide, CB
+            GuiControl, Main:Show, Bc
+            GuiControl, Main:Show, Nm
+            GuiControl, Main:Show, Qn
+            GuiControl, Main:Show, Sum
+            GuiControl, Main:Show, Stck
+        }
+    }
+Return
+#If
+
+#If WinActive("ahk_id " Main)
 Right::
     If (RMS="#1") {
         Gui, Main:Submit, NoHide
         Gui, Main:Default
         Loop, Parse, % ",1,2,3,4,5,6", `,
             GuiControl, Main:Enable, % "OpenSess" A_LoopField
-
         If (SessionID != "OpenSess6") {
             If RegExMatch(SessionID, "\d+", Mark) {
                 GuiControl, Main:Disabled, % "OpenSess" Mark + 1
@@ -670,10 +1539,9 @@ Right::
             GuiControl, Main:Disabled, % "OpenSess"
             SessionID := "OpenSess"
         }
-        ;ToolTip, % SessionID
-        If FileExist("Dump\" SessionID ".db")
+        If FileExist("Dump\" SessionID ".db") {
             RestoreSession(DB_Read("Dump\" SessionID ".db"))
-        Else {
+        } Else {
             Loop, Parse, % StrReplace(MainCtrlList, "$"), `,
             {
                 If (A_LoopField != "Qn")
@@ -683,21 +1551,30 @@ Right::
             }
             LV_Delete()
         }
+        GuiControl, Main:Hide, GivenMoney
+        GuiControl, Main:Hide, AllSum
+        GuiControl, Main:Hide, Change
+        GuiControl, Main:Hide, CB
+        GuiControl, Main:Show, Bc
+        GuiControl, Main:Show, Nm
+        GuiControl, Main:Show, Qn
+        GuiControl, Main:Show, Sum
+        GuiControl, Main:Show, Stck
         GuiControl, Main:Focus, Bc
+    } Else {
+        SendInput, {Right}
     }
     Sleep, 125
 Return
-#If
 
-#If WinActive("ahk_id " Main)
-Left::
+#If
+    #If WinActive("ahk_id " Main)
+    Left::
     If (RMS="#1") {
         Gui, Main:Default
         Gui, Main:Submit, NoHide
-
         Loop, Parse, % ",1,2,3,4,5,6", `,
             GuiControl, Main:Enable, % "OpenSess" A_LoopField
-
         If (SessionID != "OpenSess") {
             RegExMatch(SessionID, "\d+", Mark)
             If (Mark > 1) {
@@ -723,7 +1600,18 @@ Left::
             }
             LV_Delete()
         }
+        GuiControl, Main:Hide, GivenMoney
+        GuiControl, Main:Hide, AllSum
+        GuiControl, Main:Hide, Change
+        GuiControl, Main:Hide, CB
+        GuiControl, Main:Show, Bc
+        GuiControl, Main:Show, Nm
+        GuiControl, Main:Show, Qn
+        GuiControl, Main:Show, Sum
+        GuiControl, Main:Show, Stck
         GuiControl, Main:Focus, Bc
+    } Else {
+        SendInput, {Left}
     }
     Sleep, 125
 Return
@@ -731,266 +1619,309 @@ Return
 
 #If WinActive("ahk_id " Main)
 Tab::
-    If (HLM := !HLM) {
-        Loop, Parse, % "ItemsSold,SoldP,ProfitP", `,
-            GuiControl, Main:Show, % A_LoopField
+    If (RMS = "#1") {
+        If (HLM := !HLM) {
+            Loop, Parse, % "ItemsSold,SoldP,ProfitP", `,
+                GuiControl, Main:Show, % A_LoopField
+        } Else {
+            Loop, Parse, % "ItemsSold,SoldP,ProfitP", `,
+                GuiControl, Main:Hide, % A_LoopField
+        }
     } Else {
-        Loop, Parse, % "ItemsSold,SoldP,ProfitP", `,
-            GuiControl, Main:Hide, % A_LoopField
+        SendInput, {Tab}
     }
     Sleep, 125
 Return
-#If 
+#If
 
 #If WinActive("ahk_id " Main)
 Enter::
     Gui, Main:Submit, NoHide
     Gui, Main:Default
-
-    If (RMS = "#0") {
-        If (EPassString) && (!ADMUsername) {
-            ADMUsername := EPassString
-            EPassString := ""
-            GuiControl, Main:, PassString, Create ADM password
-            GuiControl, Main:, EPassString
-        }
-        If (EPassString) && (!ADMPassword) {
-            ADMPassword := EPassString
-
-            If !FileExist("Sets\Lc.lic")
-                DB_Write("Sets\Lc.lic", UUID() ";" ADMUsername ";" ADMPassword)
-            Else {
-                LC := DB_Read("Sets\Lc.lic")
-                LC := StrSplit(LC, ";")
-                If (Encode(UUID()) != LC[1])
-                    DB_Write("Sets\Lc.lic", UUID() ";" ADMUsername ";" ADMPassword)
+    If (RMS = "#-1") {
+        If (Pass) {
+            If (EPassString) && (!ADMUsername) {
+                ADMUsername := EPassString
+                EPassString := ""
+                GuiControl, Main:, PassString, Create ADM password
+                GuiControl, Main:, EPassString
             }
-
-            GuiControl, Main:Hide, LicPic
-            GuiControl, Main:Hide, EPassString
-            GuiControl, Main:Hide, PassString
-            GoSub, OpenApp
+            If (EPassString) && (!ADMPassword) {
+                ADMPassword := EPassString
+                If !FileExist("Sets\Lc.lic")
+                    DB_Write("Sets\Lc.lic", UUID() ";" ADMUsername ";" ADMPassword)
+                Else {
+                    LC := DB_Read("Sets\Lc.lic")
+                    LC := StrSplit(LC, ";")
+                    If (Encode(UUID()) != LC[1])
+                        DB_Write("Sets\Lc.lic", UUID() ";" ADMUsername ";" ADMPassword)
+                }
+                GuiControl, Main:Hide, LicPic
+                GuiControl, Main:Hide, EPassString
+                GuiControl, Main:Hide, PassString
+                Reload
+            }
+        }
+    } Else If (RMS = "#0") {
+        Level := ""
+        If (!TU) {
+            ShakeControl("Main", "TU")
+            Return
+        }
+        If (!TP) {
+            ShakeControl("Main", "TP")
+            Return
+        }
+        EverythingSetting := StrSplit(DB_Read("Sets\Lc.lic"), ";")
+        If (TU == EverythingSetting[2]) && (TP == EverythingSetting[3]) {
+            GuiControl, Main:Hide, TU
+            GuiControl, Main:Hide, TP
+            GuiControl, Main:Show, Reload
+            Level := "Admin"
+            Gosub, Continue
+        } Else {
+            If (OtherUsers := EverythingSetting[4]) {
+                LOGSArray := {}
+                Loop, % EverythingSetting.MaxIndex() - 3 {
+                    UP := StrSplit(EverythingSetting[A_Index + 3], "/")
+                    LOGSArray["" UP[1] ""] := "" UP[2] ""
+                }
+                If (LOGSArray["" TU ""] == TP) {
+                    GuiControl, Main:Hide, TU
+                    GuiControl, Main:Hide, TP
+                    GuiControl, Main:Show, Reload
+                    Level := "User"
+                    Gosub, Continue
+                }
+            }
         }
     } Else If (RMS = "#1") {
+        GuiControl, Main:Disabled, Bc
         GuiControlGet, Visi, Main:Visible, Nm
         If (Visi) {
             GuiControl, Main:, Bc, % Bc "."
             Bc := Bc "."
-
             Loop, Parse, % Trim(Bc, "."), % "."
             {
-                If (ProdDefs["" A_LoopField ""] != "") {
+                If (ProdDefs["" A_LoopField ""][1] != "") {
                     ThisQ := StrSplit(Qn, "x")[2]
                     JobDone := 0
                     Loop, % LV_GetCount() {
                         LV_GetText(ThisBc, A_Index, 1)
-
                         If (ThisBc = A_LoopField) {
-                            LV_GetText(ThisQn, A_Index, 3)
-                            LV_GetText(ThisSum, A_Index, 4)
+                            LV_GetText(ThisQn, A_Index, 4)
                             ThisQn := StrSplit(ThisQn, "x")
-                            _Qn := StrSplit(Qn, "x")
-                            LV_Modify(A_Index,,,, _Qn[1] "x" ThisQn[2] + _Qn[2], _Qn[1] * (ThisQn[2] + _Qn[2]))
+                            LV_Modify(A_Index,,, ProdDefs["" A_LoopField ""][4] " --> " ProdDefs["" A_LoopField ""][4] - (ThisQn[2] + ThisQ),, ProdDefs["" A_LoopField ""][3] "x" ThisQn[2] + ThisQ, ProdDefs["" A_LoopField ""][3] * (ThisQn[2] + ThisQ))
                             JobDone := 1
                             Break
                         }
                     }
                     If (!JobDone)
-                        LV_Add("", A_LoopField, ProdDefs["" A_LoopField ""][1], ProdDefs["" A_LoopField ""][3] "x" ThisQ, ProdDefs["" A_LoopField ""][3]*ThisQ)
-                    CreateNew("Bc,Nm,Qn,Sum", "LV0")
+                        LV_Add("", A_LoopField, ProdDefs["" A_LoopField ""][4] " --> " ProdDefs["" A_LoopField ""][4] - ThisQ, ProdDefs["" A_LoopField ""][1], ProdDefs["" A_LoopField ""][3] "x" ThisQ, ProdDefs["" A_LoopField ""][3]*ThisQ)
+                    CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
+                    GuiControl, Main:, Bc
                 }
             }
             GuiControl, Main:, Bc
+            GuiControl, Main:, Qn, x1
         } Else {
-            If (Change != "") {
-                DB_Write("Curr\" A_Now ".db", Sum_Data[2])
-                Arr := StrSplit(Trim(StrSplit(Sum_Data[2], "> ")[2], "|"), "|")
-
-                For Each, SO in Arr {
-
-                    ThisArr := StrSplit(SO, ";")
-                    ThisBc := ThisArr[1]
-                    ThisQn := StrSplit(ThisArr[3], "x")[2]
-
-                    RemoveFromStock(ThisBc, ThisQn)
-                }
-
-                GuiControl, Main:, GivenMoney
-                GuiControl, Main:, AllSum
-                GuiControl, Main:, Change
-
-                GuiControl, Main:Hide, GivenMoney
-                GuiControl, Main:Hide, AllSum
-                GuiControl, Main:Hide, Change
-
-                GuiControl, Main:Show, Bc
-                GuiControl, Main:Show, Nm
-                GuiControl, Main:Show, Qn
-                GuiControl, Main:Show, Sum
-                GuiControl, Main:Show, Stck
-
-                GuiControl, Main:, Bc
-                GuiControl, Main:, Nm
-                GuiControl, Main:, Qn, x1
-                GuiControl, Main:, Sum
-
-                LV_Delete()
-                GuiControl, Main:Focus, Bc
-
-                If (Sessions[OpenSess]) {
-                    Sessions.Remove(Sessions)
-                }
+            GuiControlGet, Visi, Main:Visible, CB
+            If (Visi) {
+                Gui, Main:Submit, NoHide
+                Bc := SubStr(CB, InStr(CB, " ",, 0) + 1)
+                GuiControl, Main:, Bc, % Trim(Bc, "[]")
             } Else {
-                ShakeControl("Main", "GivenMoney")
+                If (Change != "") {
+                    DB_Write("Curr\" A_Now ".db", Sum_Data[2])
+                    Arr := StrSplit(Trim(StrSplit(Sum_Data[2], "> ")[2], "|"), "|")
+                    For Each, SO in Arr {
+                        ThisArr := StrSplit(SO, ";")
+                        ThisBc := ThisArr[1]
+                        ThisQn := StrSplit(ThisArr[3], "x")[2]
+                        ProdDefs["" ThisBc ""][4] := ProdDefs["" ThisBc ""][4] - ThisQn
+                        If (ProdDefs["" ThisBc ""][5]) {
+                            For Other, Bcs in StrSplit(ProdDefs["" ThisBc ""][5], "/") {
+                                ProdDefs["" Bcs ""][4] := ProdDefs["" Bcs ""][4] - ThisQn
+                            }
+                        }
+                        UpdateProdDefs()
+                    }
+                    GuiControl, Main:, GivenMoney
+                    GuiControl, Main:, AllSum
+                    GuiControl, Main:, Change
+                    GuiControl, Main:Hide, GivenMoney
+                    GuiControl, Main:Hide, AllSum
+                    GuiControl, Main:Hide, Change
+                    GuiControl, Main:Show, Bc
+                    GuiControl, Main:Show, Nm
+                    GuiControl, Main:Show, Qn
+                    GuiControl, Main:Show, Sum
+                    GuiControl, Main:Show, Stck
+                    GuiControl, Main:, Bc
+                    GuiControl, Main:, Nm
+                    GuiControl, Main:, Qn, x1
+                    GuiControl, Main:, Sum
+                    LV_Delete()
+                    GuiControl, Main:Focus, Bc
+                    If FileExist("Dump\" SessionID ".db")
+                        FileDelete, % "Dump\" SessionID ".db"
+                } Else {
+                    ShakeControl("Main", "GivenMoney")
+                }
             }
         }
+        CheckListSum()
+        GuiControl, Main:Enabled, Bc
+        GuiControl, Main:Focus, Bc
     } Else If (RMS = "#3") {
         Filled := (Dbc) && (Dnm) && (Dbp) && (Dsp)
         If (Filled) {
-            If Dbc is not Digit 
-            {
+            If (Dbc ~= "[^0-9A-Za-z]") {
                 ShakeControl("Main", "Dbc")
                 Return
             }
-            If (Dnm ~= "\[|;|\]") 
-            {
+            If (Dnm ~= "\[|\]|\;|\$|\||\/") {
                 ShakeControl("Main", "Dnm")
-                Return
+            Return
             }
-            If Dbp is not Digit 
-            {
+            If (Dbp ~= "[^0-9]") {
                 ShakeControl("Main", "Dbp")
                 Return
             }
-            If Dsp is not Digit 
-            {
+            If (Dsp ~= "[^0-9]") {
                 ShakeControl("Main", "Dsp")
                 Return
             }
-
             If (!EditMod[1]) {
-                If !(ProdDefs["" Dbc ""][1]) {
-                    ProdDefs["" Dbc ""] := [Dnm,Dbp,Dsp,0]
-
-                    genData := ""
-                    For Each, Barcode in ProdDefs {
-                        genData .= Each ";" Barcode[1] ";" Barcode[2] ";" Barcode[3] ";" (Barcode[4] ? Barcode[4] : 0) "|" 
-                    }
-
-                    DB_Write("Sets\PD.db", genData)
-                    LV_Add("", Dbc, Dnm, Dbp, Dsp)
+                If (ProdDefs["" Dbc ""][1] = "") {
+                    ProdDefs["" Dbc ""] := [Dnm,Dbp,Dsp,0,ProdDefs["" Dbc ""][5]]
+                    UpdateProdDefs()
+                    LoadDefined()
                     GuiControl, Main:, Dbc
                     GuiControl, Main:, Dnm
                     GuiControl, Main:, Dbp
                     GuiControl, Main:, Dsp
                     GuiControl, Main:Focus, Dbc
                 } Else {
-                    For Each, Barcode in ProdDefs {
-                        If (Each = Dbc) {
-                            Exist := 1
-                            Row := A_Index
-                        }
-                    }
+                    LoadDefined()
                     GuiControl, Main:Focus, LV2
                     SendInput, {Home}
-                    If (Row - 1) {
-                        Loop, % Row - 1
-                            SendInput, {Down}
+                    Loop, % LV_GetCount() {
+                        LV_GetText(ThisBar, A_Index, 1)
+                        If (ThisBar = Dbc)
+                            Break
+                        SendInput, {Down}
                     }
                 }
             } Else {
-                Exist := 0
-
-                For Each, Barcode in ProdDefs {
-                    If (Each = Dbc) && (Dbc != EditMod[2]) {
-                        Exist := 1
-                        Row := A_Index
+                Temp := ProdDefs.Clone()
+                If (Dbc = EditMod[2])
+                    Temp.Remove("" Dbc "")
+                If (Temp["" Dbc ""][1] = "") {
+                    Modify := 0
+                    GuiControl, Main:Focus, LV2
+                    SendInput, {Home}
+                    Loop, % LV_GetCount() {
+                        LV_GetText(ThisBar, A_Index, 1)
+                        If (ThisBar = Dbc) {
+                            Modify := 1
+                            ProdDefs["" Dbc ""] := [Dnm,Dbp,Dsp,0,ProdDefs["" Dbc ""][5]]
+                            Break
+                        }
+                        SendInput, {Down}
                     }
-                }
-
-                If (!Exist) {
-                    ProdDefs.Remove(PrevBc)
-                    ProdDefs["" Dbc ""] := [Dnm,Dbp,Dsp,0]
-
-                    genData := ""
-                    For Each, Barcode in ProdDefs {
-                        If (Each)
-                            genData .= Each ";" Barcode[1] ";" Barcode[2] ";" Barcode[3] ";" (Barcode[4] ? Barcode[4] : 0) "|" 
+                    If (!Modify) {
+                        SendInput, {Home}
+                        Loop, % LV_GetCount() {
+                            LV_GetText(ThisBar, A_Index, 1)
+                            If (ThisBar = EditMod[2]) {
+                                Modify := 1
+                                ProdDefs.Delete("" EditMod[2] "")
+                                ProdDefs["" Dbc ""] := [Dnm,Dbp,Dsp,0,ProdDefs["" Dbc ""][5]]
+                                Break
+                            }
+                            SendInput, {Down}
+                        }
                     }
-
-                    LV_Modify(EditMod[2],, Dbc, Dnm, Dbp, Dsp)
-
-                    DB_Write("Sets\PD.db", genData)
-                    GuiControl, Main:, Dbc
-                    GuiControl, Main:, Dnm
-                    GuiControl, Main:, Dbp
-                    GuiControl, Main:, Dsp
-
+                    If (Modify) {
+                        UpdateProdDefs()
+                        LV_Modify(LV_GetNext(),, Dbc, Dnm, Dbp, Dsp)
+                        LoadDefined()
+                        GuiControl, Main:Focus, LV2
+                        SendInput, {Home}
+                        Loop, % LV_GetCount() {
+                            LV_GetText(ThisBar, A_Index, 1)
+                            If (ThisBar = Dbc)
+                                Break
+                            SendInput, {Down}
+                        }
+                        GuiControl, Main:, Dbc
+                        GuiControl, Main:, Dnm
+                        GuiControl, Main:, Dbp
+                        GuiControl, Main:, Dsp
+                    }
                     EditMod[1] := 0
-                    GuiControl, Main:Focus, Dbc
                 } Else {
                     GuiControl, Main:Focus, LV2
                     SendInput, {Home}
-                    Loop, % Row - 1
+                    Loop, % LV_GetCount() {
+                        LV_GetText(ThisBar, A_Index, 1)
+                        If (ThisBar = Dbc)
+                            Break
                         SendInput, {Down}
+                    }
                 }
             }
         }
     } Else If (RMS = "#4") {
-        If (Pnm != "") && (Pqn != "") {
-            LV_GetText(BcId, Row, 1)
-
-            ProdDefs["" BcId ""] := [ProdDefs["" BcId ""][1], ProdDefs["" BcId ""][2], ProdDefs["" BcId ""][3], Pqn]
-
-            genData := ""
-            For Each, Barcode in ProdDefs {
-                If (Each)
-                    genData .= Each ";" Barcode[1] ";" Barcode[2] ";" Barcode[3] ";" (Barcode[4] ? Barcode[4] : 0) "|" 
-            }
-
-            GuiControl, Main:, Psum, % Pqn "x" ProdDefs["" BcId ""][2] " = " (Pqn * ProdDefs["" BcId ""][2])
-            LV_Modify(Row,,,, Pqn, Pqn "x" ProdDefs["" BcId ""][2] " = " (Pqn * ProdDefs["" BcId ""][2]))
-
-            OverAll := 0
-            For Each, Item in ProdDefs {
-                OverAll := OverAll + (Item[4] * Item[2])
-            }
-            GuiControl, Main:, StockSum, % OverAll
-
-            DB_Write("Sets\PD.db", genData)
-        }
-    } Else If (RMS = "#5") {
-        SumCol1 := SumCol2 := SumCol3 := 0
-        If (Row := LV_GetNext()) {
-            NRow := 0
-            While (NRow != Row) {
-                If (A_Index = 1)
-                    NRow := Row
-                If (NRow) {
-                    LV_GetText(C1, NRow, 2)
-                    SumCol1 := SumCol1 + SubStr(C1, 3)
-                    LV_GetText(C2, NRow, 3)
-                    SumCol2 := SumCol2 + SubStr(C2, 3)
-                    LV_GetText(C3, NRow, 4)
-                    SumCol3 := SumCol3 + SubStr(C3, 3)
+        GuiControlGet, ThisFocus, Main:FocusV
+        If (ThisFocus = "Pnm") {
+            Gui, Main:Submit, NoHide
+            Gui, Main:Default
+            If (Pnm != "") && (ProdDefs["" Pnm ""][1]) {
+                GuiControl, Main:Focus, LV3
+                SendInput, {Home}
+                Loop, % LV_GetCount() - 1 {
+                    LV_GetText(ThisBc, A_Index, 1)
+                    If (ThisBc = Pnm) {
+                        Gosub, DisplayQn
+                        Break
+                    }
+                    SendInput, {Down}
                 }
-                NRow := LV_GetNext(NRow)
+                GuiControl, Main:+Redraw, Pnm
+                GuiControl, Main:+Redraw, Pqn
             }
-            GuiControl, Main:, SPr, % SumCol1
-            GuiControl, Main:, CPr, % SumCol2
-            GuiControl, Main:, OAProfit, % SumCol3
-        } Else {
-            Loop, % LV_GetCount() {
-                LV_GetText(C1, A_Index, 2)
-                SumCol1 := SumCol1 + SubStr(C1, 3)
-                LV_GetText(C2, A_Index, 3)
-                SumCol2 := SumCol2 + SubStr(C2, 3)
-                LV_GetText(C3, A_Index, 4)
-                SumCol3 := SumCol3 + SubStr(C3, 3)
+    } Else If (ThisFocus = "Pqn") {
+        If (Pnm != "") && (Pqn != "") {
+            If Pqn is Digit
+            {
+                LV_GetText(BcId, Row, 1)
+                ProdDefs["" BcId ""] := [ProdDefs["" BcId ""][1], ProdDefs["" BcId ""][2], ProdDefs["" BcId ""][3], Pqn, ProdDefs["" BcId ""][5]]
+                If (ProdDefs["" BcId ""][5]) {
+                    For Other, Bcs in StrSplit(ProdDefs["" BcId ""][5], "/") {
+                        ProdDefs["" Bcs ""][4] := Pqn
+                    }
+                }
+                UpdateProdDefs()
+                LoadStockList()
             }
-            GuiControl, Main:, SPr, % SumCol1
-            GuiControl, Main:, CPr, % SumCol2
-            GuiControl, Main:, OAProfit, % SumCol3
+        }
+    }
+    } Else If (RMS = "#6") {
+        If (UserName) && (UserPass) {
+            If (UserName ~= ";|\||\/") {
+                ShakeControl("Main", UserName)
+            Return
+            }
+            If (UserPass ~= ";|\||\/") {
+                ShakeControl("Main", UserPass)
+                Return
+            }
+            If !InStr(CollectData := DB_Read("Sets\Lc.lic"), ";" UserName "/") {
+                DB_Write("Sets\Lc.lic", CollectData ";" UserName "/" UserPass)
+                LoadAccounts()
+            }
         }
     } Else {
         SendInput, {Enter}
@@ -1003,16 +1934,15 @@ Return
 Up::
     Gui, Main:Submit, NoHide
     Gui, Main:Default
-
     If (RMS = "#1") {
         GuiControlGet, Focused, Main:FocusV
         If (Focused = "LV0") {
             Row := LV_GetNext()
             If (Row) {
-                LV_GetText(ThisQn, Row := LV_GetNext(), 3)
+                LV_GetText(ThisQn, Row := LV_GetNext(), 4)
+                LV_GetText(ThisBc, Row, 1)
                 VQ := StrSplit(ThisQn, "x")
-                LV_Modify(Row,,,, VQ[1] "x" VQ[2] + 1)
-                LV_Modify(Row,,,,, VQ[1] * (VQ[2] + 1))
+                LV_Modify(Row,,, ProdDefs["" ThisBc ""][4] " --> " ProdDefs["" ThisBc ""][4] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))
                 Sleep, 125
             }
         } Else {
@@ -1021,7 +1951,8 @@ Up::
             GuiControl, Main:, Qn, % _Qn "x" Qn += 1
             Sleep, 125
         }
-        CreateNew("Bc,Nm,Qn,Sum", "LV0")
+        CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
+        CheckListSum()
     } Else {
         SendInput, {Up}
         Sleep, 125
@@ -1033,17 +1964,16 @@ Return
 Down::
     Gui, Main:Submit, NoHide
     Gui, Main:Default
-
     If (RMS = "#1") {
         GuiControlGet, Focused, Main:FocusV
         If (Focused = "LV0") {
             Row := LV_GetNext()
             If (Row) {
-                LV_GetText(ThisQn, Row := LV_GetNext(), 3)
+                LV_GetText(ThisQn, Row := LV_GetNext(), 4)
+                LV_GetText(ThisBc, Row, 1)
                 VQ := StrSplit(ThisQn, "x")
                 If (VQ[2] > 1) {
-                    LV_Modify(Row,,,, VQ[1] "x" VQ[2] - 1)
-                    LV_Modify(Row,,,,, VQ[1] * (VQ[2] - 1))
+                    LV_Modify(Row,,, ProdDefs["" ThisBc ""][4] " --> " ProdDefs["" ThisBc ""][4] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
                 }
                 Sleep, 125
             }
@@ -1054,7 +1984,8 @@ Down::
                 GuiControl, Main:, Qn, % _Qn "x" Qn -= 1
             Sleep, 125
         }
-        CreateNew("Bc,Nm,Qn,Sum", "LV0")
+        CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
+        CheckListSum()
     } Else {
         SendInput, {Down}
         Sleep, 125
@@ -1066,29 +1997,28 @@ Return
 Delete::
     Gui, Main:Default
     Gui, Main:Submit, NoHide
-
     If (RMS = "#1") {
         LV_Delete(LV_GetNext())
+        CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
+        CheckListSum()
     } Else If (RMS = "#3") {
         LV_GetText(ThisID, LV_GetNext(), 1)
-
-        ProdDefs.Remove("" ThisID "")
-
-        genData := ""
-        For Each, Barcode in ProdDefs {
-            If (Each)
-                genData .= Each ";" Barcode[1] ";" Barcode[2] ";" Barcode[3] ";" (Barcode[4] ? Barcode[4] : 0) "|" 
-        }
-
-        DB_Write("Sets\PD.db", genData)
+        ProdDefs.Delete("" ThisID "")
+        UpdateProdDefs()
         LV_Delete(LV_GetNext())
+    } Else If (RMS = "#6") {
+        LV_GetText(Name, Row := LV_GetNext(), 1)
+        LV_GetText(Pass, Row, 2)
+        If InStr(US := DB_Read("Sets\Lc.lic"), Name "/" Pass) {
+            DB_Write("Sets\Lc.lic", StrReplace(US, ";" Name "/" Pass))
+        }
+        LoadAccounts()
     } Else {
         SendInput, {Delete}
     }
     Sleep, 125
 Return
 #If
-
 #If WinActive("ahk_id " Main)
 Space::
     Gui, Main:Submit, NoHide
@@ -1106,9 +2036,8 @@ Space::
             GuiControl, Main:Show, Change
             GuiControl, Main:, AllSum, % (Sum_Data := CalculateSum())[1]
             GuiControl, Main:Focus, GivenMoney
-            If FileExist("Dump\" SessionID ".db")
-                FileDelete, % "Dump\" SessionID ".db"
         }
+        CheckListSum()
     } Else {
         SendInput, {Space}
     }
@@ -1118,7 +2047,23 @@ Return
 
 #If WinActive("ahk_id " Main)
 ^F::
-    If (RMS = "#3") {
+    If (RMS = "#1") {
+        Gui, Main:Submit, NoHide
+        Gui, Main:Default
+        Lst := ""
+        For Every, One in ProdDefs {
+            If InStr(One[1], Bc)
+                (A_Index = 1) ? Lst .= One[1] " [" Every "]||" : Lst .= One[1] " [" Every "]|"
+        }
+        Lst := Trim(Lst, "|")
+        If (Lst) {
+            GuiControl, Main:, CB, % "|" Lst
+            GuiControl, Main:Focus, CB
+            GuiControl, Main:Show, CB
+            GuiControl, Main:Choose, CB, 1
+            ;GuiControl, Main:+Redraw, CB
+        }
+    } Else If (RMS = "#3") {
         Gui, Main:Submit, NoHide
         Gui, Main:Default
         LV_Delete()
@@ -1133,24 +2078,6 @@ Return
                 LV_Add("", Each, Item[1], Item[2], Item[3])
             }
         }
-    } Else If (RMS = "#4") {
-        Gui, Main:Submit, NoHide
-        Gui, Main:Default
-        ;LV_Delete()
-        If (Pnm != "") {
-            For Each, Item in ProdDefs {
-                If (Each = RTrim(Pnm, " :")) {
-                    GuiControl, Main:Focus, LV3
-                    SendInput, {Home}
-                    Loop, % A_Index - 1
-                        SendInput, {Down}
-                    GuiControl, Main:+Redraw, Pnm
-                    GuiControl, Main:+Redraw, Pqn
-                    Gosub, DisplayQn
-                    Break
-                }
-            }
-        }
     } Else {
         SendInput, ^F
     }
@@ -1160,58 +2087,40 @@ Return
 
 AnalyzeAvail:
     Gui, Main:Submit, NoHide
-
+    GuiControl, Main:Hide, CB
     GuiControl, Main:, Stck
     GuiControl, Main:, Nm
     GuiControl, Main:, Sum
     Value_Qn := StrSplit(Qn, "x")
-
     GuiControl, Main:, Qn, % "x" Value_Qn[2]
-
-    CtlColors.Change(Bc_, "FFFFFF", "008000")
     If (Bc) {
-        If (Bc ~= "[^0-9\.]")
-        {
-            CtlColors.Change(Bc_, "FF8080", "008000")
-            ShakeControl("Main", "Bc")
-            Return
-        }
-        Arr := StrSplit(Bc, ".")
-        Bc := Arr[Arr.MaxIndex()]
-        If (ProdDefs["" Bc ""] != "") {
+        If (ProdDefs["" Bc ""][1] != "") {
             GuiControl, Main:, Nm, % ProdDefs["" Bc ""][1]
             Value_Qn := StrSplit(Qn, "x")
             GuiControl, Main:, Qn, % ProdDefs["" Bc ""][3] "x" Value_Qn[2]
             GuiControl, Main:, Sum, % ProdDefs["" Bc ""][3] * Value_Qn[2]
             GuiControl, Main:, Stck, % (ProdDefs["" Bc ""][4]) ? ProdDefs["" Bc ""][4] : 0
-            GuiControl, Main:, Bc, % Bc
-            CreateNew("Bc,Nm,Qn,Sum", "LV0")
         }
-        PostMessage, 0xB1, 0, -1,, % "ahk_id " Bc_
     }
+    CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
 Return
-
 AnalyzeQn:
     Gui, Main:Submit, NoHide
     Value_Qn := StrSplit(Qn, "x")
     If (Value_Qn[1]) && (Value_Qn[2]) {
         GuiControl, Main:, Sum, % Value_Qn[1] * Value_Qn[2]
-        CreateNew("Bc,Nm,Qn,Sum", "LV0")
     }
+    CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
 Return
-
 QuitMain:
     Gui, Main:Destroy
 Return
-
 QuitDefiner:
     Gui, Def:Destroy
 Return
-
 MainGuiClose:
 Quit:
 ExitApp
-
 LoadCurrent() {
     global
     LV_Delete()
@@ -1222,7 +2131,7 @@ LoadCurrent() {
         If (RD) {
             SplitPath, % A_LoopFileName,,,, OutNameNoExt
             FormatTime, ThisTime, % OutNameNoExt, yyyy/MM/dd HH:mm:ss
-            LV_Add("", _19 ": " ThisTime)
+            LV_Add("", A_LoopFileFullPath, _19 ": " ThisTime)
             Arr := CalcProfit(RD)
             SPr := Arr[2][1] + SPr
             CP := Arr[2][2] + CP
@@ -1237,24 +2146,21 @@ LoadCurrent() {
         GuiControl, Main:, Bought, % CP
     }
 }
-
 GetBuyPriceByID(Data, TID) {
     Loop, Parse, Data, |
     {
         If (SubStr(A_LoopField, 1, InStr(A_LoopField, ";") - 1) = TID) {
             Return, StrSplit(A_LoopField, ";")[3]
-        }
     }
-    Return, 0
 }
-
+Return, 0
+}
 CalcProfit(PData) {
     TrArr := StrSplit(PData, "> ")
     TimeDT := TrArr[1]
     RArr := StrSplit(TrArr[3], ";")
-    Return, [TimeDT, [RArr[1], RArr[2], RArr[3]], StrSplit(StrSplit(TrArr[2], ";")[3], "x")[2]]
+Return, [TimeDT, [RArr[1], RArr[2], RArr[3]], StrSplit(StrSplit(TrArr[2], ";")[3], "x")[2]]
 }
-
 Correct(File) {
     RD := DB_Read(A_LoopFileFullPath)
     DDS := StrSplit((Arr := StrSplit(RD, "> "))[2], ";")
@@ -1264,67 +2170,102 @@ Correct(File) {
         DB_Write(A_LoopFileFullPath, Arr[1] "> " Bc ";" ProdDefs["" Bc ""][1] ";" ProdDefs["" Bc ""][3] "x" Qn ";" ProdDefs["" Bc ""][3] * Qn ";" ProdDefs["" Bc ""][2] "x" Qn ";" ProdDefs["" Bc ""][2] * Qn "> " ProdDefs["" Bc ""][3] * Qn ";" ProdDefs["" Bc ""][2] * Qn ";" (ProdDefs["" Bc ""][3] * Qn) - (ProdDefs["" Bc ""][2] * Qn))
     }
 }
-
 LoadProf() {
     LV_Delete()
     OAPr := 0, SPr := 0, CP := 0
-
+    DayAgo := A_Now
+    DayAgo += -1, days
     Loop, Files, Valid\*.db, R F
     {
-        RD := DB_Read(A_LoopFileFullPath)
-        If (RD) {
-            Arr := CalcProfit(RD)
-            If (!Arr[2][2]) {
-                Correct(A_LoopFileFullPath)
-                RD := DB_Read(A_LoopFileFullPath)
+        If (SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3) >= DayAgo) {
+            RD := DB_Read(A_LoopFileFullPath)
+            If (RD) {
                 Arr := CalcProfit(RD)
+                If (!Arr[2][2]) {
+                    Correct(A_LoopFileFullPath)
+                    RD := DB_Read(A_LoopFileFullPath)
+                    Arr := CalcProfit(RD)
+                }
+                LV_Add("", A_LoopFileFullPath, Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
+                SPr := Arr[2][1] + SPr
+                CP := Arr[2][2] + CP
+                OAPr := Arr[2][3] + OAPr
             }
-            LV_Add("", Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
-            SPr := Arr[2][1] + SPr
-            CP := Arr[2][2] + CP
-            OAPr := Arr[2][3] + OAPr
         }
     }
-
     Loop, Files, Curr\*.db
     {
-        RD := DB_Read(A_LoopFileFullPath)
-        If (RD) {
-            Arr := CalcProfit(RD)
-            If (!Arr[2][2]) {
-                Correct(A_LoopFileFullPath)
-                RD := DB_Read(A_LoopFileFullPath)
+        If (SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3) >= DayAgo) {
+            RD := DB_Read(A_LoopFileFullPath)
+            If (RD) {
                 Arr := CalcProfit(RD)
+                If (!Arr[2][2]) {
+                    Correct(A_LoopFileFullPath)
+                    RD := DB_Read(A_LoopFileFullPath)
+                    Arr := CalcProfit(RD)
+                }
+                LV_Add("", A_LoopFileFullPath, Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
+                SPr := Arr[2][1] + SPr
+                CP := Arr[2][2] + CP
+                OAPr := Arr[2][3] + OAPr
             }
-            LV_Add("", Arr[1], "+ " Arr[2][1], "- " Arr[2][2], "+ " Arr[2][3])
-            SPr := Arr[2][1] + SPr
-            CP := Arr[2][2] + CP
-            OAPr := Arr[2][3] + OAPr
         }
     }
     GuiControl, Main:, OAProfit, % OAPr
     GuiControl, Main:, SPr, % SPr
     GuiControl, Main:, CPr, % CP
 }
-
 LoadDefined() {
+    global
     LV_Delete()
+    AllItems := ""
     For Each, Item in ProdDefs {
-        LV_Add("", Each, Item[1], Item[2], Item[3])
+        AllItems .= Each ","
     }
+    Sort, AllItems, N D,
+    Loop, Parse, % Trim(AllItems, ","), `,
+        LV_Add("", A_LoopField, ProdDefs["" A_LoopField ""][1], ProdDefs["" A_LoopField ""][2], ProdDefs["" A_LoopField ""][3])
 }
-
 LoadStockList() {
     global
     LV_Delete()
-    OverAll := 0
+    AllItems := ""
     For Each, Item in ProdDefs {
-        LV_Add("", Each, Item[1], (Item[4] ? Item[4] : 0), (Item[4] ? (Item[4] "x" Item[2] " = " Item[4] * Item[2]) : 0))
-        OverAll := OverAll + (Item[4] * Item[2])
+        AllItems .= Each ","
     }
-    GuiControl, Main:, StockSum, % OverAll
+    Sort, AllItems, N D,
+    Counted := OverAll := 0
+    Skipped := ""
+    Loop, Parse, % Trim(AllItems, ","), `,
+    {
+        If ValidPro(A_LoopField, ProdDefs["" A_LoopField ""][1], ProdDefs["" A_LoopField ""][2], ProdDefs["" A_LoopField ""][3]) {
+            LV_Add("", A_LoopField, ProdDefs["" A_LoopField ""][1], (ProdDefs["" A_LoopField ""][4] ? ProdDefs["" A_LoopField ""][4] : 0), Vale := ((ProdDefs["" A_LoopField ""][4] ? ProdDefs["" A_LoopField ""][4] : 0) "x" ProdDefs["" A_LoopField ""][2] " = " (ProdDefs["" A_LoopField ""][4] ? ProdDefs["" A_LoopField ""][4] : 0) * ProdDefs["" A_LoopField ""][2]))
+            If (!InStr(Skipped, "/" A_LoopField) && !InStr(Skipped, A_LoopField "/")) {
+                OverAll := OverAll + (ProdDefs["" A_LoopField ""][4] * ProdDefs["" A_LoopField ""][2])
+            } Else {
+                LV_Modify(A_Index,,,,, Vale " [Skipped]")
+            }
+            If (ProdDefs["" A_LoopField ""][5]) {
+                Skipped .= ProdDefs["" A_LoopField ""][5] "/"
+            }
+            Counted := Counted + 1
+        }
+    }
+    If (OverAll) && (Counted)
+        GuiControl, Main:, StockSum, % OverAll " | [" Counted "]"
+    Else
+        GuiControl, Main:, StockSum, % "---"
+    GuiControl, Main:, Pqn
+    GuiControl, Main:, Psum
+    GuiControl, Main:Focus, Pnm
+    PostMessage, 0xB1, 0, -1,, % "ahk_id " Pnm_
 }
-
+ValidPro(_1, _2, _3, _4) {
+    Rs := 1
+    If (_1 = "") || (_2 = "") || (_3 _4 ~= "[^0-9]")
+        Rs := 0
+Return, Rs
+}
 LoadInterfaceLng() {
     global
     IniRead, LngSection, Setting.ini, UseLng, Use
@@ -1336,23 +2277,19 @@ LoadInterfaceLng() {
         _%ID% := Val
     }
 }
-
 Version() {
     IniRead, Version, Setting.ini, Version, AppVer
 Return, Version
 }
-
-WM_LBUTTONDOWN() {
+WM_LBUTTONDOWN:
     PostMessage 0xA1, 2
-}
-
+Return
 UUID() {
     For obj in ComObjGet("winmgmts:{impersonationLevel=impersonate}!\\" . A_ComputerName . "\root\cimv2").ExecQuery("Select * From Win32_ComputerSystemProduct")
         return, obj.UUID
 }
-
 Encode(string) {
-    VarSetCapacity(bin, StrPut(string, "UTF-8")) && len := StrPut(string, &bin, "UTF-8") - 1 
+    VarSetCapacity(bin, StrPut(string, "UTF-8")) && len := StrPut(string, &bin, "UTF-8") - 1
     if !(DllCall("crypt32\CryptBinaryToString", "ptr", &bin, "uint", len, "uint", 0x1, "ptr", 0, "uint*", size))
         Return
     VarSetCapacity(buf, size << 1, 0)
@@ -1360,7 +2297,6 @@ Encode(string) {
         Return
 return, StrGet(&buf)
 }
-
 Decode(string) {
     if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", 0, "uint*", size, "ptr", 0, "ptr", 0))
         Return
@@ -1369,7 +2305,6 @@ Decode(string) {
         Return
 return, StrGet(&buf, size, "UTF-8")
 }
-
 ShakeControl(GUINm, ControlID) {
     GuiControlGet, GotPos, %GUINm%:Pos, %ControlID%
     GuiControl, %GUINm%: Move, %ControlID%, % "x" GotPosX - 1
@@ -1381,93 +2316,77 @@ ShakeControl(GUINm, ControlID) {
     }
     GuiControl, %GUINm%: Move, %ControlID%, % "x" GotPosX
 }
-
 CalculateSum() {
     global
     Cost := Sum := 0
     FormatTime, OutTime, % A_Now, yyyy/MM/dd HH:mm:ss
     Data := OutTime "> "
     Loop, % LV_GetCount() {
-        LV_GetText(ThisSum, A_Index, 4)
+        LV_GetText(ThisSum, A_Index, 5)
         Sum += ThisSum
-        
         LV_GetText(Bc, A_Index, 1)
-        LV_GetText(Nm, A_Index, 2)
-        LV_GetText(Qn, A_Index, 3)
-
+        LV_GetText(Nm, A_Index, 3)
+        LV_GetText(Qn, A_Index, 4)
         BP := ProdDefs["" Bc ""][2]
         Qn_ := SubStr(Qn, InStr(Qn, "x") + 1)
-
         ThisCost := BP * Qn_
         Cost += ThisCost
-
         Data .= Bc ";" Nm ";" Qn ";" ThisSum ";" BP "x" Qn_ ";" ThisCost ";" ThisSum - ThisCost "|"
     }
     Data .= "> " Sum ";" Cost ";" Sum - Cost
 Return, [Sum, Trim(Data, "|"), OutTime]
 }
-
 DB_Write(FileName, Info) {
+    SetTimer, Update, Off
+    If InStr(FileName, "PD.db")
+        FileCopy, % FileName, % "Sets\Bu\" A_Now ".Bu"
     DBObj := FileOpen(FileName, "w")
-
     Loop, Parse, % "CH-26259084-DB"
         DBObj.WriteChar(Asc(A_LoopField))
-
     Loop, 1010
         DBObj.WriteChar(0)
-
     Loop, Parse, % Encode(Info)
         DBObj.WriteChar(Asc(A_LoopField))
-
     Loop, 1024
         DBObj.WriteChar(0)
-
     DBObj.Close()
+    SetTimer, Update, On
 }
-
 DB_Read(FileName) {
+    SetTimer, Update, Off
     DBObj := FileOpen(FileName, "r")
-
     Hedr := ""
     Loop, 14 {
         Hedr .= Chr(DBObj.ReadChar())
     }
     If (Hedr != "CH-26259084-DB")
         Return, 0
-
     Info := ""
     DBObj.Pos := 1024
-
     Loop {
         Info .= (ThisChar := Chr(DBObj.ReadChar()))
     } Until (ThisChar = "")
-
+    SetTimer, Update, On
 Return, Decode(Info)
 }
-
 Hide(ListCtrl) {
     Loop, Parse, ListCtrl, `,
     {
         GuiControl, Main:Hide, % StrReplace(A_LoopField, "$")
     }
 }
-
 Show(ListCtrl) {
     global
+    Loaded := 0
     WinGetPos,,, Width,, % "ahk_id " Main
     Loop, Parse, ListCtrl, `,
     {
         If !InStr(A_LoopField, "$") {
             GuiControlGet, Post, Main:Pos, % A_LoopField
             GuiControl, Main:Move, % A_LoopField, % "x" PostX + Width
-        }
-
-        If !InStr(A_LoopField, "$") {
             GuiControl, Main:Show, % A_LoopField
         }
-
         LT := Width // 4, J := 4
-
         If !InStr(A_LoopField, "OpenSess") {
             Loop, % LT {
                 If !InStr(A_LoopField, "$") {
@@ -1476,25 +2395,27 @@ Show(ListCtrl) {
                 }
             }
         } Else {
-            GuiControlGet, Post, Main:Pos, % A_LoopField
-            GuiControl, Main:Move, % A_LoopField, % "x" PostX - Width
+            Loop, % LT // 2 {
+                If !InStr(A_LoopField, "$") {
+                    GuiControlGet, Post, Main:Pos, % A_LoopField
+                    GuiControl, Main:Move, % A_LoopField, % "x" PostX - J * 2
+                }
+            }
         }
     }
+    Loaded := 1
 }
-
 CheckLicense() {
     If !FileExist("Sets\Lc.lic")
         Return, 0
     LC := DB_Read("Sets\Lc.lic")
     LC := StrSplit(LC, ";")
-
     If (UUID() != LC[1])
         Return, 0
-    Return, 1
+Return, 1
 }
-
 CheckFoldersSet() {
-    Folders := "Curr,Lib,Sets,Stoc,Valid,Dump"
+    Folders := "Curr,Lib,Sets,Sets\Bu,Stoc,Valid,Dump"
     Loop, Parse, Folders, `,
     {
         If !InStr(FileExist(A_LoopField), "D") {
@@ -1502,40 +2423,24 @@ CheckFoldersSet() {
         }
     }
 }
-
 LoadBackground() {
     global
     Loop, Files, % "Img\Prt*.png"
     {
         Name := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 4)
         Set := StrSplit(Name, "_")
-
         PosArr := StrSplit(Set[2], "x")
         DemArr := StrSplit(Set[3], "x")
-
-        Gui, Main:Add, Picture, % "x" PosArr[1] " y" PosArr[2] " w" DemArr[1] " h" DemArr[2] " v" Set[1], % "Img\" A_LoopFileName
+        If (A_Index = 5)
+            Gui, Main:Add, Picture, % "x" PosArr[1] " y" PosArr[2] " w" DemArr[1] " h" DemArr[2] " v" Set[1] " gWM_LBUTTONDOWN", % "Img\" A_LoopFileName
+        Else
+            Gui, Main:Add, Picture, % "x" PosArr[1] " y" PosArr[2] " w" DemArr[1] " h" DemArr[2] " v" Set[1], % "Img\" A_LoopFileName
     }
 }
-
 RemoveFromStock(BC, QN) {
-    Data := ""
-    For Index, Item in StrSplit(DB_Read("Sets\PD.db"), "|") {
-        Line := Item
-        ThisArr := StrSplit(Item, ";")
-        If ((ThisBc := ThisArr[1]) = BC) {
-
-            If (ThisArr[5] > QN)
-                ThisArr[5] := ThisArr[5] - QN
-            Else
-                ThisArr[5] := 0
-            Line := ThisArr[1] ";" ThisArr[2] ";" ThisArr[3] ";" ThisArr[4] ";" ThisArr[5]
-
-        }
-        Data .= Line "|"
-    }
-    DB_Write("Sets\PD.db", Trim(Data, "|"))
+    ProdDefs["" BC ""][4] := ProdDefs["" BC ""][4] - QN
+    UpdateProdDefs()
 }
-
 RandomHexColor() {
     global
     Frag := Seq := ""
@@ -1580,9 +2485,8 @@ RandomHexColor() {
         }
         Seq .= Frag
     }
-    Return, Seq
+Return, Seq
 }
-
 CreateNew(Controls, LV := "", Clear := 0) {
     global
     Gui, Main:Default
@@ -1591,28 +2495,22 @@ CreateNew(Controls, LV := "", Clear := 0) {
     Loop, Parse, Controls, `,
     {
         GuiControlGet, Content, Main:, % A_LoopField
-        If (A_LoopField = "Bc")
-            List_ .= A_LoopField "=" Trim(Content, ".") ";"
-        Else
-            List_ .= A_LoopField "=" Content ";"
+        List_ .= A_LoopField "=" Content ";"
     }
-
     LV_ := "|"
     If (LV) {
         Loop, % LV_GetCount() {
             LV_GetText(Bc__, A_Index, 1)
-            LV_GetText(Nm__, A_Index, 2)
-            LV_GetText(Qn__, A_Index, 3)
-            LV_GetText(Sum__, A_Index, 4)
-            LV_ .= Bc__ "/" Nm__ "/" Qn__ "/" Sum__ "|"
+            LV_GetText(QnBA__, A_Index, 2)
+            LV_GetText(Nm__, A_Index, 3)
+            LV_GetText(Qn__, A_Index, 4)
+            LV_GetText(Sum__, A_Index, 5)
+            LV_ .= Bc__ "/" QnBA__ "/" Nm__ "/" Qn__ "/" Sum__ "|"
         }
     }
-
     If (LV_ = "|")
         LV_ := ""
-    ;ToolTip % Trim(List_, ";") LV_
     DB_Write("Dump\" SessionID ".db", Trim(List_, ";") LV_)
-
     If (Clear) {
         LV_Delete()
         Loop, Parse, Controls, `,
@@ -1624,56 +2522,52 @@ CreateNew(Controls, LV := "", Clear := 0) {
         }
     }
 }
-
 RestoreSession(Data) {
     global
     Gui, Main:Default
     ArrayData := StrSplit(Data, ";")
-
+    LV_Delete()
     For Each, Item in ArrayData {
         If !InStr(Item, "|") {
             CtlVal := StrSplit(Item, "=")
             GuiControl, Main:, % CtlVal[1], % CtlVal[2]
         } Else {
-            LV_Delete()
             Loop, Parse, % Trim(Item, "|"), |
             {
                 If (A_Index > 1) {
                     CtlVals := StrSplit(A_LoopField, "/")
-                    LV_Add("", CtlVals[1], CtlVals[2], CtlVals[3], CtlVals[4])
+                    LV_Add("", CtlVals[1], CtlVals[2], CtlVals[3], CtlVals[4], CtlVals[5])
                 }
             }
         }
     }
+    CheckListSum()
 }
-
 LoadDefinitions(Data) {
     Tmp := {}
     Loop, Parse, % Trim(Data, "|"), |
     {
         ThisDef := StrSplit(A_LoopField, ";")
-        Tmp["" ThisDef[1] ""] := [ThisDef[2], ThisDef[3], ThisDef[4], ThisDef[5]]
+        Tmp["" ThisDef[1] ""] := [ThisDef[2], ThisDef[3], ThisDef[4], ThisDef[5], ThisDef[6] ? ThisDef[6] : ""]
     }
-    Return, Tmp
+Return, Tmp
 }
-
 CheckForUpdates() {
     global
     GuiControl, Startup:, Stat, % _23
     JsonKey := "{"
-         . "`n  ""type"": ""service_account"","
-         . "`n  ""project_id"": ""cassier"","
-         . "`n  ""private_key_id"": ""a4dcb0edcb51cfb9109fffcaf9087ad77d5b89ed"","
-         . "`n  ""private_key"": ""-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC1025anDEc9hjY\nRlaQaJ6azis+uYSbl52g4S2beQ8L0CWy3ODiECrXGclV+KuHULDQGZcqKL1zDPZ4\n2P/77Et6Mr+tUqMBfV3AgWbNsvF0zfpv8c7/Oa068wV9vlzRckZK9fSJ19kdxYlf\ns7ZxeJiYndo1WD17ZUh0WElMO7eGQN7Ntgjj5Zkn5ARpBUlCVo5Ou2YItaLz0jty\nuA762PVW+GK0kv5vfXLbPNHZ35VY0RbaIPakEaeQKEC0lRNv1omiQV8DwkqPjNLD\nkCFfV2yQ+cNUNhv610r1Z79gPIcC2+bNg3DiFXuyE5iU6p78wpdZhLChYx7rVjrA\nE8sG1QrJAgMBAAECggEAEAiWCk+l29yhrtSioB2LOuU9fMyY/0Vv5RAzC6r+fJEW\nxr57TPcvzlCb55GQwqAHCQ3wpAsvclx59+8ewThovkMiXuZsffgJn+BpUDzcb1Hi\nKL2LsaFRTGNb7RovwiWcqDiNhbUIeshNoShOSS3hIVG6770ZWTvCfcWMdR7HXYNN\nqfb3CKlWw8eFfnrOu5nnuUcouSIPu9Neow7rXT5xZGQpNQ3AbhacHVXf7LMCXUKH\nKsWi5n+/QsYiuX+R9avksI81/14Pt1FZI8+dUVZj17exSlz8WOGF91CPEAQxIuxv\nDOxBYIOQFCKoJU22baymuGO7g86WO9I9d9uyb8dwJwKBgQDuu8+RA9OHnP+TFViw\nT3TD+VtQz5HWeW5dpLHp6rTOZLe2CBnzORYMPbZPni4Oqo0G5NEBtdiRWEj43Sjx\nK/Xpyar/Vzj0jMkHpFHmsjrZtblTdl0L94iGgfPuCrU3er4P073TjZuhJQoazZSn\n8PUMR8uGoncd431O/CAOI9HR0wKBgQDC+fcLYozcNR18XsQopSxtHCuTs7Gy1bWY\n2ZePMnr5R0eJSKQoycjXkDAaiujGjyWtbVzsgzBrZsmy7MYoPlQ733wIKSJPOI1w\nExysKy6fEabn3b8/+bEmccE04FCXjMuzL2cYzUqXza7waMDl3RixvBkks1LX6vCe\n4NTKsyZzcwKBgHsExpn4eckZCs3VIyV/XDEcToTe4Uy+uDODCbb7Hf55Af3IQO8H\njKf0KPzwCtW95vwVbupNtXJ4JuoutMlKGOdG51m6rXu/DFxmvVl+oDrNnNk4Vgwz\nmuONFZClbepP0p6/QsM/5mFsf79+DktYLD4OxP70uyLotgq8exwuMxHHAoGAFboT\nHHKr7bIBiiVpSHo3fCUiegARMjN8W/8LU4q1h2e5AgRVPrJVrifEJIEMNWwoL647\nJ6Pq1l0K5uRZpIxliJJ72ND0oM1VfYKztD/PnywxZC8iq7dgVT9h30mL0Yd//4St\nwWbHBCmIcAPMUxETOmMSjjNpbOQiUiINtFTIWR8CgYAUCKpuI3Azrj12mQiWl4gB\npKf9ejar0BZI6wnPkw+kiBz69arPSImQ2kmD/1zNr2T/ls+BJtaBC8pT4DsY9R/t\no+lOahSqIv9FTl0BpzFUq7oYcV6a0J4OwMYDofMrOii/qlLK3o1OMV8Kj9UfjZg7\nIv1i7pY9Baq81qbosT+cJQ==\n-----END PRIVATE KEY-----\n"","
-         . "`n  ""client_email"": ""firebase-adminsdk-nwpgf@cassier.iam.gserviceaccount.com"","
-         . "`n  ""client_id"": ""112531104458713251383"","
-         . "`n  ""auth_uri"": ""https://accounts.google.com/o/oauth2/auth"","
-         . "`n  ""token_uri"": ""https://oauth2.googleapis.com/token"","
-         . "`n  ""auth_provider_x509_cert_url"": ""https://www.googleapis.com/oauth2/v1/certs"","
-         . "`n  ""client_x509_cert_url"": ""https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-nwpgf`%40cassier.iam.gserviceaccount.com"""
-         . "`n}"
+    . "`n ""type"": ""service_account"","
+    . "`n ""project_id"": ""cassier"","
+    . "`n ""private_key_id"": ""a4dcb0edcb51cfb9109fffcaf9087ad77d5b89ed"","
+    . "`n ""private_key"": ""-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC1025anDEc9hjY\nRlaQaJ6azis+uYSbl52g4S2beQ8L0CWy3ODiECrXGclV+KuHULDQGZcqKL1zDPZ4\n2P/77Et6Mr+tUqMBfV3AgWbNsvF0zfpv8c7/Oa068wV9vlzRckZK9fSJ19kdxYlf\ns7ZxeJiYndo1WD17ZUh0WElMO7eGQN7Ntgjj5Zkn5ARpBUlCVo5Ou2YItaLz0jty\nuA762PVW+GK0kv5vfXLbPNHZ35VY0RbaIPakEaeQKEC0lRNv1omiQV8DwkqPjNLD\nkCFfV2yQ+cNUNhv610r1Z79gPIcC2+bNg3DiFXuyE5iU6p78wpdZhLChYx7rVjrA\nE8sG1QrJAgMBAAECggEAEAiWCk+l29yhrtSioB2LOuU9fMyY/0Vv5RAzC6r+fJEW\nxr57TPcvzlCb55GQwqAHCQ3wpAsvclx59+8ewThovkMiXuZsffgJn+BpUDzcb1Hi\nKL2LsaFRTGNb7RovwiWcqDiNhbUIeshNoShOSS3hIVG6770ZWTvCfcWMdR7HXYNN\nqfb3CKlWw8eFfnrOu5nnuUcouSIPu9Neow7rXT5xZGQpNQ3AbhacHVXf7LMCXUKH\nKsWi5n+/QsYiuX+R9avksI81/14Pt1FZI8+dUVZj17exSlz8WOGF91CPEAQxIuxv\nDOxBYIOQFCKoJU22baymuGO7g86WO9I9d9uyb8dwJwKBgQDuu8+RA9OHnP+TFViw\nT3TD+VtQz5HWeW5dpLHp6rTOZLe2CBnzORYMPbZPni4Oqo0G5NEBtdiRWEj43Sjx\nK/Xpyar/Vzj0jMkHpFHmsjrZtblTdl0L94iGgfPuCrU3er4P073TjZuhJQoazZSn\n8PUMR8uGoncd431O/CAOI9HR0wKBgQDC+fcLYozcNR18XsQopSxtHCuTs7Gy1bWY\n2ZePMnr5R0eJSKQoycjXkDAaiujGjyWtbVzsgzBrZsmy7MYoPlQ733wIKSJPOI1w\nExysKy6fEabn3b8/+bEmccE04FCXjMuzL2cYzUqXza7waMDl3RixvBkks1LX6vCe\n4NTKsyZzcwKBgHsExpn4eckZCs3VIyV/XDEcToTe4Uy+uDODCbb7Hf55Af3IQO8H\njKf0KPzwCtW95vwVbupNtXJ4JuoutMlKGOdG51m6rXu/DFxmvVl+oDrNnNk4Vgwz\nmuONFZClbepP0p6/QsM/5mFsf79+DktYLD4OxP70uyLotgq8exwuMxHHAoGAFboT\nHHKr7bIBiiVpSHo3fCUiegARMjN8W/8LU4q1h2e5AgRVPrJVrifEJIEMNWwoL647\nJ6Pq1l0K5uRZpIxliJJ72ND0oM1VfYKztD/PnywxZC8iq7dgVT9h30mL0Yd//4St\nwWbHBCmIcAPMUxETOmMSjjNpbOQiUiINtFTIWR8CgYAUCKpuI3Azrj12mQiWl4gB\npKf9ejar0BZI6wnPkw+kiBz69arPSImQ2kmD/1zNr2T/ls+BJtaBC8pT4DsY9R/t\no+lOahSqIv9FTl0BpzFUq7oYcV6a0J4OwMYDofMrOii/qlLK3o1OMV8Kj9UfjZg7\nIv1i7pY9Baq81qbosT+cJQ==\n-----END PRIVATE KEY-----\n"","
+    . "`n ""client_email"": ""firebase-adminsdk-nwpgf@cassier.iam.gserviceaccount.com"","
+    . "`n ""client_id"": ""112531104458713251383"","
+    . "`n ""auth_uri"": ""https://accounts.google.com/o/oauth2/auth"","
+    . "`n ""token_uri"": ""https://oauth2.googleapis.com/token"","
+    . "`n ""auth_provider_x509_cert_url"": ""https://www.googleapis.com/oauth2/v1/certs"","
+    . "`n ""client_x509_cert_url"": ""https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-nwpgf`%40cassier.iam.gserviceaccount.com"""
+    . "`n}"
     SetWorkingDir, Update
-
     If FileExist("LogKey.Json")
         FileDelete, LogKey.Json
     FileAppend, % JsonKey, LogKey.Json
@@ -1704,13 +2598,11 @@ CheckForUpdates() {
             FileDelete, LogKey.Json
             FileRead, DL, DL.txt
             FileDelete, DL.txt
-            
             DownloadFile(DL, "Cassier-Update.zip")
         }
     }
     SetWorkingDir, % A_ScriptDir
 }
-
 DownloadFile(URL, SaveFileAs := "", Overwrite := True, UseProgressBar := True) {
     global
     if !SaveFileAs {
@@ -1724,7 +2616,6 @@ DownloadFile(URL, SaveFileAs := "", Overwrite := True, UseProgressBar := True) {
         WebRequest.Open("HEAD", URL)
         WebRequest.Send()
         FinalSize := WebRequest.GetResponseHeader("Content-Length")
-
         File := FileOpen(SaveFileAs, "rw")
         SetTimer, __UpdateProgressBar, 1000
     }
@@ -1738,9 +2629,8 @@ DownloadFile(URL, SaveFileAs := "", Overwrite := True, UseProgressBar := True) {
         Run, Apply.exe
         ExitApp
     }
-    Return
+Return
 }
-
 __UpdateProgressBar:
     CurrentSize := File.Length
     LastSizeTick := CurrentSizeTick
@@ -1749,26 +2639,125 @@ __UpdateProgressBar:
     GuiControl, Startup:, UPProg, % PercentDone
     GuiControl, Startup:, Stat, % PercentDone " % - " _26
 Return
-
 CheckForUpdatesStat() {
     IniRead, Stat, Setting.ini, Update, Upt
     If (Stat = "ERROR")
         Stat := 0
-    Return, Stat
+Return, Stat
 }
-
-UpdateSessionView() {
+MouseHover() {
     global
-    Loop, Parse, % ",1,2,3,4,5,6", `,
-    {
-        Ind := A_LoopField
-        Loop, Parse, MainCtrlList, `,
-            GuiControl, Main:Hide, % StrReplace(A_LoopField, "$") Ind
+    If !GetKeyState("F1") {
+        If (A_GuiControl = "LV1" || A_GuiControl = "LV4") {
+            If (RMS = "#2")
+                Gui, Main:ListView, LV1
+            Else
+                Gui, Main:ListView, LV4
+            If (Row := LV_GetNext()) {
+                If (!ShowTT) {
+                    MouseGetPos, X, Y
+                    X += 20
+                    Y += 10
+                    HH := A_ScreenHeight // 2
+                    Gui, ReIn:Show, NoActivate x%X% y%Y% w800 h%HH%
+                    ShowTT := 1
+                }
+                If (ThisLoaded != Row) {
+                    LV_GetText(FileName, Row, 1)
+                    RawData := StrSplit(DB_Read(FileName), "> ")[2]
+                    Items := StrSplit(Trim(RawData, "|"), "|")
+                    Result := "=====================================================================`n"
+                    AllProf := 0
+                    For Each, One in Items {
+                        DI := StrSplit(Trim(One, ";"), ";")
+                        Result .= " Name: " DI[2] "`n Sold Price: " DI[3] "=" DI[4] "`n Buy Price: " DI[5] "=" DI[6] "`n Profit Made: " DI[7] "`n=====================================================================`n"
+                        AllProf := AllProf + DI[7]
+                    }
+                    Result .= "`n OverAll Profit: " AllProf
+                    GuiControl, ReIn:, DInfo, % Result
+                    ThisLoaded := Row
+                }
+                MouseGetPos, X, Y
+                X += 20
+                Y += 10
+                HH := A_ScreenHeight // 2
+                Gui, ReIn:Show, NoActivate x%X% y%Y% h%HH%
+            } Else If (ShowTT) {
+                Gui, ReIn:Hide
+                ShowTT := 0
+            }
+        } Else If (ShowTT) {
+            Gui, ReIn:Hide
+            ShowTT := 0
+        }
     }
-    Loop, Parse, MainCtrlList, `,
-    {
-        Sleep, 10
-        If !InStr(A_LoopField, "$")
-            GuiControl, Main:Show, % StrReplace(A_LoopField, "$") SessionID
+}
+UpdateProdDefs() {
+    Global
+    genData := ""
+    For Each, Barcode in ProdDefs {
+        genData .= Each ";" Barcode[1] ";" Barcode[2] ";" Barcode[3] ";" (Barcode[4] ? Barcode[4] : 0) (Barcode[5] ? ";" Barcode[5] : "") "|"
     }
+    DB_Write("Sets\PD.db", genData)
+}
+CheckListSum() {
+    global
+    Everything := 0
+    Loop, % LV_GetCount() {
+        LV_GetText(ThisLSum, A_Index, 5)
+        Everything += ThisLSum
+    }
+    If (Everything) {
+        GuiControl, Main:, ThisListSum, % Everything
+    } Else {
+        GuiControl, Main:, ThisListSum, % "---"
+    }
+}
+AllButThis(All, This) {
+    tmp := ""
+    For every, one in All {
+        If (one != This) {
+            tmp .= one "/"
+        }
+    }
+Return, Trim(tmp, "/")
+}
+GenColor(Arr) {
+    EarlierData := ""
+    If (FileExist("Sets\CS.db"))
+        EarlierData := DB_Read("Sets\CS.db")
+    Items := ""
+    For Each, One in Arr {
+        Items .= One ";"
+    }
+    Items := RandomHexColor() ";" Trim(Items, ";") "|"
+    DB_Write("Sets\CS.db", EarlierData Items)
+}
+FindTheColor(ID) {
+    For every, one in StrSplit(DB_Read("Sets\CS.db"), "|") {
+        If InStr(one, ID ";") || InStr(one, ";" ID) {
+            ThisOne := StrSplit(one, ";")
+        Return, "0x" ThisOne[1]
+    }
+}
+}
+RemoveBC(Data, Bc) {
+    NewData := ""
+    For Any, Thing in StrSplit(Data, "/") {
+        If (Thing != Bc) {
+            NewData .= Thing "/"
+        }
+    }
+Return, Trim(NewData, "/")
+}
+LoadAccounts() {
+    LV_Delete()
+    AccInfo := StrSplit(DB_Read("Sets\Lc.lic"), ";")
+    Loop, % AccInfo.Length() - 3 {
+        NP := StrSplit(AccInfo[A_Index + 3], "/")
+        LV_Add(, NP[1], NP[2])
+    }
+    GuiControl, Main:, UserName
+    GuiControl, Main:, UserPass
+    GuiControl, Main:Focus, UserName
 }
