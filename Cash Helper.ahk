@@ -1245,6 +1245,7 @@ MainGuiSize:
         GuiControl, Main:Move, % "LV5", % "h" Height - 140
     }
 Return
+
 Update:
     If WinActive("ahk_id " Main) {
         If (Level = "User") {
@@ -1292,6 +1293,10 @@ Update:
                     GuiControl, Main:+Redraw, CB
                 }
             }
+            ;GuiControlGet, Txt, Main:, Bc
+            ;If (!ProdDefs["" Txt ""][1]) && (ThisFocus != "CB") {
+            ;    GuiControl, Main:, Bc
+            ;}
         }
     }
 Return
@@ -1939,24 +1944,30 @@ Up::
         If (Focused = "LV0") {
             Row := LV_GetNext()
             If (Row) {
-                LV_GetText(ThisQn, Row := LV_GetNext(), 4)
+                LV_GetText(ThisQn, Row, 4)
                 LV_GetText(ThisBc, Row, 1)
                 VQ := StrSplit(ThisQn, "x")
                 LV_Modify(Row,,, ProdDefs["" ThisBc ""][4] " --> " ProdDefs["" ThisBc ""][4] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))
-                Sleep, 125
+                
             }
         } Else {
-            _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
-            Qn := SubStr(Qn, InStr(Qn, "x") + 1)
-            GuiControl, Main:, Qn, % _Qn "x" Qn += 1
-            Sleep, 125
+            If (LastR := LV_GetCount()) {
+                LV_GetText(ThisQn, LastR, 4)
+                LV_GetText(ThisBc, LastR, 1)
+                VQ := StrSplit(ThisQn, "x")
+                LV_Modify(LastR,,, ProdDefs["" ThisBc ""][4] " --> " ProdDefs["" ThisBc ""][4] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))    
+            } Else {
+                _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
+                Qn := SubStr(Qn, InStr(Qn, "x") + 1)
+                GuiControl, Main:, Qn, % _Qn "x" Qn += 1
+            }
         }
         CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
         CheckListSum()
     } Else {
         SendInput, {Up}
-        Sleep, 125
     }
+    Sleep, 125
 Return
 #If
 
@@ -1969,27 +1980,34 @@ Down::
         If (Focused = "LV0") {
             Row := LV_GetNext()
             If (Row) {
-                LV_GetText(ThisQn, Row := LV_GetNext(), 4)
+                LV_GetText(ThisQn, Row, 4)
                 LV_GetText(ThisBc, Row, 1)
                 VQ := StrSplit(ThisQn, "x")
                 If (VQ[2] > 1) {
                     LV_Modify(Row,,, ProdDefs["" ThisBc ""][4] " --> " ProdDefs["" ThisBc ""][4] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
                 }
-                Sleep, 125
             }
         } Else {
-            _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
-            Qn := SubStr(Qn, InStr(Qn, "x") + 1)
-            If (Qn > 1)
-                GuiControl, Main:, Qn, % _Qn "x" Qn -= 1
-            Sleep, 125
+            If (LastR := LV_GetCount()) {
+                LV_GetText(ThisQn, LastR, 4)
+                LV_GetText(ThisBc, LastR, 1)
+                VQ := StrSplit(ThisQn, "x")
+                If (VQ[2] > 1) {
+                    LV_Modify(LastR,,, ProdDefs["" ThisBc ""][4] " --> " ProdDefs["" ThisBc ""][4] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
+                }
+            } Else {
+                _Qn := SubStr(Qn, 1, InStr(Qn, "x") - 1)
+                Qn := SubStr(Qn, InStr(Qn, "x") + 1)
+                If (Qn > 1)
+                    GuiControl, Main:, Qn, % _Qn "x" Qn -= 1
+            }
         }
         CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
         CheckListSum()
     } Else {
         SendInput, {Down}
-        Sleep, 125
     }
+    Sleep, 125
 Return
 #If
 
