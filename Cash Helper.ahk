@@ -83,10 +83,11 @@ OpenApp:
     ImageButton.Create(Btn, LMBTN*)
     Gui, Main:Add, Button, x0 y210 HwndBtn w199 h40 gManage vBtn6 Hidden, % "Management"
     ImageButton.Create(Btn, LMBTN*)
-    Gui, Main:Add, Edit, xm ym+150 vTU w178 Center Border -E0x200 HwndE
+    global TU, TP
+    Gui, Main:Add, Edit, xm ym+150 vTU w178 Center -E0x200 HwndE
     CtlColors.Attach(E, "FFFFFF", "000000")
-    Gui, Main:Add, Edit, xm+200 ym+150 vTP w178 Center Border -E0x200 Password HwndE
-    CtlColors.Attach(E, "FFFFFF", "FF0000")
+    Gui, Main:Add, Edit, xm+200 ym+150 vTP w178 Center -E0x200 Password HwndTP_
+    CtlColors.Attach(TP_, "FFFFFF", "FF0000")
     Gui, Main:Add, Button, xm ym+150 w178 HwndBtn vReload gReload, Reload
     ImageButton.Create(Btn, GreenBTN*)
     GuiControl, Main:Hide, Reload
@@ -140,7 +141,7 @@ OpenApp:
     LV_ModifyCol(3, "234 Center")
     LV_ModifyCol(4, "232 Center")
     LV_ModifyCol(5, "230 Center")
-    EnsureCtrlList := "LV1,EnsBtn,Sold,Bought,ProfitEq"
+    EnsureCtrlList := "LV1,EnsBtn,$Sold,$Bought,$ProfitEq"
     Gui, Main:Font, s25
     Gui, Main:Add, Button, xm+205 ym+30 vEnsBtn w760 h80 hwndBtn Hidden gValid, % _9
     ImageButton.Create(Btn, EBTN*)
@@ -381,7 +382,7 @@ MainGuiSize:
     GuiControl, Main:Move, % "Prt1", % "y" Height - 55 " w" Width - 199
     GuiControl, Main:Move, % "Prt2", % "y" Height - 55
     GuiControl, Main:Move, % "Prt3", % "y" Height - 60 " w" Width
-    GuiControl, Main:Move, % "Prt4", % "h" Height - 70
+    GuiControl, Main:Move, % "Prt4", % "h" Height
     GuiControl, Main:Move, % "Prt5", % "x" Width - 57 " y" Height - 45
     Loop, 5 {
         GuiControl, Main:+Redraw, % "Prt" A_Index
@@ -397,6 +398,8 @@ MainGuiSize:
     If (RMS != "#0") {
         GuiControl, Main:Move, Reload, % "y" Height - 45
         GuiControl, Main:+Redraw, Reload
+        GuiControl, Main:Move, TP, % "y" Height - 45
+        GuiControl, Main:+Redraw, TP
     }
     If (RMS = "#1") {
         InitY := 108
@@ -532,15 +535,12 @@ Update:
                     GuiControl, Main:+Redraw, CB
                 }
             }
-            ;GuiControlGet, Txt, Main:, Bc
-            ;If (!ProdDefs["" Txt ""][1]) && (ThisFocus != "CB") {
-            ;    GuiControl, Main:, Bc
-            ;}
         }
     }
 Return
 OpenMain:
     RMS := "#1"
+    GuiControl, Main:Focus, Bc
     Gosub, MainGuiSize
     Loop, Parse, % "124356"
         GuiControl, Main:Disabled, Btn%A_LoopField%
@@ -552,7 +552,6 @@ OpenMain:
         GuiControl, Main:Enabled, Btn%A_LoopField%
     If FileExist("Dump\" SessionID ".db")
         RestoreSession(DB_Read("Dump\" SessionID ".db"))
-    GuiControl, Main:Focus, Bc
 Return
 Submit:
     RMS := "#2"
@@ -861,7 +860,7 @@ Return
 Return
 #If
 
-#If WinActive("ahk_id " Main)
+#If WinActive("ahk_id " Main) && (Level = "Admin")
 Tab::
     If (RMS = "#1") {
         If (HLM := !HLM) {
@@ -869,6 +868,14 @@ Tab::
                 GuiControl, Main:Show, % A_LoopField
         } Else {
             Loop, Parse, % "ItemsSold,SoldP,ProfitP", `,
+                GuiControl, Main:Hide, % A_LoopField
+        }
+    } Else If (RMS = "#2") {
+        If (HLM := !HLM) {
+            Loop, Parse, % "Sold,Bought,ProfitEq", `,
+                GuiControl, Main:Show, % A_LoopField
+        } Else {
+            Loop, Parse, % "Sold,Bought,ProfitEq", `,
                 GuiControl, Main:Hide, % A_LoopField
         }
     } Else {
@@ -919,8 +926,11 @@ Enter::
         EverythingSetting := StrSplit(DB_Read("Sets\Lc.lic"), ";")
         If (TU == EverythingSetting[2]) && (TP == EverythingSetting[3]) {
             GuiControl, Main:Hide, TU
-            GuiControl, Main:Hide, TP
+            GuiControl, Main:+ReadOnly -Password +Left, TP
+            CtlColors.Change(TP_, "80FF80", "008000")
+            GuiControl, Main:, TP, % TU
             GuiControl, Main:Show, Reload
+
             Level := "Admin"
             Gosub, Continue
         } Else {
@@ -932,7 +942,9 @@ Enter::
                 }
                 If (LOGSArray["" TU ""] == TP) {
                     GuiControl, Main:Hide, TU
-                    GuiControl, Main:Hide, TP
+                    GuiControl, Main:+ReadOnly -Password +Left, TP
+                    CtlColors.Change(TP_, "80FF80", "008000")
+                    GuiControl, Main:, TP, % TU
                     GuiControl, Main:Show, Reload
                     Level := "User"
                     Gosub, Continue
@@ -962,7 +974,6 @@ Enter::
                     }
                     If (!JobDone)
                         LV_Add("", A_LoopField, ProdDefs["" A_LoopField ""][4] " --> " ProdDefs["" A_LoopField ""][4] - ThisQ, ProdDefs["" A_LoopField ""][1], ProdDefs["" A_LoopField ""][3] "x" ThisQ, ProdDefs["" A_LoopField ""][3]*ThisQ)
-                    CreateNew("Bc,Nm,Qn,Sum,ThisListSum", "LV0")
                     GuiControl, Main:, Bc
                 }
             }
@@ -976,8 +987,11 @@ Enter::
                 GuiControl, Main:, Bc, % Trim(Bc, "[]")
             } Else {
                 If (Change != "") {
-                    DB_Write("Curr\" A_Now ".db", Sum_Data[2])
+                    If !InStr(FileExist("Curr\" TU), "D")
+                        FileCreateDir, % "Curr\" TU
+                    DB_Write("Curr\" TU "\" A_Now ".db", Sum_Data[2])
                     Arr := StrSplit(Trim(StrSplit(Sum_Data[2], "> ")[2], "|"), "|")
+                    
                     For Each, SO in Arr {
                         ThisArr := StrSplit(SO, ";")
                         ThisBc := ThisArr[1]
@@ -1307,8 +1321,7 @@ Return
 
 #If WinActive("ahk_id " Main)
 ^W::
-    ;FileSelectFolder, Location,, 3, Output
-    DB_Write(A_Desktop "\C2F.db", Clipboard)
+    DB_Write(A_Desktop "\genFILE.db", Clipboard)
     Sleep, 125
 Return
 #If
@@ -1462,7 +1475,6 @@ LoadProf() {
     DayAgo += -1, days
     Loop, Files, Valid\*.db, R F
     {
-        
         If (SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3) >= DayAgo) {
             RD := DB_Read(A_LoopFileFullPath)
             If (RD) {
@@ -1631,7 +1643,8 @@ Return, [Sum, Trim(Data, "|"), OutTime]
 }
 DB_Write(FileName, Info) {
     SetTimer, Update, Off
-    If InStr(FileName, "PD.db")
+    MsgBox, % FileName
+    If InStr(FileName, "\PD.db")
         FileCopy, % FileName, % "Sets\Bu\" A_Now ".Bu"
     DBObj := FileOpen(FileName, "w")
     Loop, Parse, % "CH-26259084-DB"
