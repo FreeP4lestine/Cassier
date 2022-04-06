@@ -34,7 +34,8 @@ RedBTN := [[0, 0xFFFFFF, , 0xFF0000, 0, , 0xD43F3A, 1]
 LMBTN := [[0, 0x80FFFFFF, , 0x000000, 3, , 0x008000]
            , [0, 0x80D8D8AD, , 0x000000, 3, , 0x008000]
            , [0, 0x80D8D8AD, , 0xFF0000, 3, , 0x008000]
-           , [0, 0x80D8D8AD, , 0x000000, 3, , 0x80D8D8AD]]
+           , [0, "Img\LMBD.png", , 0x000000, 3, , 0x80D8D8AD]]
+           
 EBTN := [[0, 0xC6E6C6, , , 0, , 0x5CB85C, 5]
            , [0, 0x91CF91, , , 0, , 0x5CB85C, 5]
            , [0, 0x5CB85C, , , 0, , 0x5CB85C, 5]
@@ -126,17 +127,17 @@ OpenApp:
 
     global TU, TP
 
-    Gui, Main:Add, Edit, xm ym+150 vTU w178 Center HwndE h30
+    Gui, Main:Add, Edit, xm ym+150 vTU w178 Center HwndE h28 -E0x200
     CtlColors.Attach(E, "FFFFFF", "000000")
-    Gui, Main:Add, Edit, xm+200 ym+170 vTP w178 Center Password HwndTP_ h30
+    Gui, Main:Add, Edit, xm+200 ym+170 vTP w178 Center Password HwndTP_ h28 -E0x200
     CtlColors.Attach(TP_, "FFFFFF", "FF0000")
-    Gui, Main:Add, Button, xm+400 ym+170 w178 HwndBtn vLogin gEnter h30, % _35
+    Gui, Main:Add, Button, xm+400 ym+170 w178 HwndBtn vLogin gEnter h28, % _35
     ImageButton.Create(Btn, [[0, 0xFFFFFF, , 0x008000, 0, , 0x008000, 1]
                            , [0, 0x008000, , 0xFFFFFF, 0, , 0x008000, 1]
                            , [0, 0x008000, , 0xFFFF00, 0, , 0x008000, 1]
                            , [0, 0x6C7174, , 0x000000, 0, , 0xFFFFFF, 1]]*)
 
-    Gui, Main:Add, Button, xm ym+170 w178 HwndBtn vReload gReload Hidden h30, % _73
+    Gui, Main:Add, Button, xm ym+170 w178 HwndBtn vReload gReload Hidden h28, % _73
     ImageButton.Create(Btn, GreenBTN*)
     
     MainCtrlList := "Bc,$CB,Nm,Qn,Sum,LV0,ThisListSum,AddEnter,$SubKridi,$GivenMoney,$AllSum,$Change,$ItemsSold,$SoldP,$CostP,$ProfitP,DiscountPic,Percent"
@@ -701,7 +702,7 @@ CheckAndRun:
     SetTimer, Update, 250
     Gui, Main:+Resize +MinSize1000x500
     Gui, Main:Show, % "Maximize"
-    Gosub, % A_GuiControl
+    Gosub, % LabelName ? LabelName : A_GuiControl
     MM := 1
 Return
 
@@ -1254,6 +1255,41 @@ ClearDsp:
 Return
 
 #If WinActive("ahk_id " Main)
+F1::
+    LabelName := "OpenMain"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
+F2::
+    LabelName := "Submit"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
+F3::
+    LabelName := "Define"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
+F4::
+    LabelName := "StockPile"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
+F5::
+    LabelName := "Prof"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
+F6::
+    LabelName := "Manage"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
+F7::
+    LabelName := "Kridi"
+    GoSub, CheckAndRun
+    LabelName := ""
+Return
 ^s::
     If (RMS="#3") {
         Gui, Main:Submit, NoHide
@@ -1487,7 +1523,7 @@ Enter::
             If (TU == EverythingSetting[2]) && (TP == EverythingSetting[3]) {
                 GuiControl, Main:Hide, TU
                 GuiControl, Main:+ReadOnly -Password, TP
-                CtlColors.Change(TP_, "80FF80", "000000")
+                CtlColors.Change(TP_, "B2B2B2", "000000")
                 GuiControl, Main:, TP, % TU
                 GuiControl, Main:, TU, % TP
                 GuiControl, Main:Show, Reload
@@ -1506,7 +1542,7 @@ Enter::
                 If (LOGSArray["" TU ""] == TP) {
                     GuiControl, Main:Hide, TU
                     GuiControl, Main:+ReadOnly -Password, TP
-                    CtlColors.Change(TP_, "80FF80", "000000")
+                    CtlColors.Change(TP_, "B2B2B2", "000000")
                     GuiControl, Main:, TP, % TU
                     GuiControl, Main:, TU, % TP
                     GuiControl, Main:Show, Reload
