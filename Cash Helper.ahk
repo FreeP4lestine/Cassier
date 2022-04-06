@@ -91,8 +91,6 @@ Gui, Main: +HwndMain
 Gui, Main:Font, s10 Bold, Calibri
 Gui, Main:Color, 0xD8D8AD
 LoadBackground()
-Gui, Main:Add, Text, x0 y0 w203 HwndTopText vTText h20, % "  " _75 ":"
-CtlColors.Attach(TopText, "FFFFFF", "000000")
 Pass := 0
 Global RMS
 If !CheckLicense() {
@@ -105,6 +103,8 @@ If !CheckLicense() {
     GuiControl, Main:, PassString, Create ADM username
     Return
 }
+Gui, Main:Add, Text, x0 y0 w203 HwndTopText vTText h20, % "  " _75 ":"
+CtlColors.Attach(TopText, "FFFFFF", "000000")
 OpenApp:
     RMS := "#0"
     Gui, Main:+Resize
