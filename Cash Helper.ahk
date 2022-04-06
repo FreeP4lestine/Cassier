@@ -2738,7 +2738,6 @@ Ready() {
         Msgbox % Lastest := req.responseText
     }
 }
-
 CheckForUpdates() {
     global
     SetWorkingDir, Update
@@ -2754,7 +2753,6 @@ CheckForUpdates() {
     SetWorkingDir, % A_ScriptDir
     If !InStr(Lastest, ".")
         Lastest := Lastest ".0"
-    If (Lastest > (Ver := Version())) {
         MsgBox, 36, % Lastest " " _50 , % _51 " " Lastest "?"
         IfMsgBox, Yes
         {
