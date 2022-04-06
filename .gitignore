@@ -1,5 +1,13 @@
-
-Img/Thumbs.db
-*.db
-*.exe
-*.lic
+Curr/**
+Stoc/**
+Dump/**
+PR/**
+ST/**
+Kr/**
+Loads/**
+Log/**
+Release/**
+Sets/**
+Curr/**
+Valid/**
+Cash Helper.exe
