@@ -240,7 +240,7 @@ OpenApp:
     ImageButton.Create(PDSave_, RedBtn*)
 
     Gui, Main:Font, s15
-    Gui, Main:Add, ListView, xm+205 ym+170 w760 r9 Grid vLV2 HwndHLV Hidden gEdit, % _63 "|" _38 "|" _68 "|" _69
+    Gui, Main:Add, ListView, xm+205 ym+170 w760 r9 Grid vLV2 HwndHLV Hidden gEdit, % _63 "|" _38 "|" _40 "|" _39
     Gui, Main:Default
     Gui, Main:ListView, LV2
     LV_ModifyCol(1, "185")
@@ -276,7 +276,7 @@ OpenApp:
     TodayDate += -1, Days
     Gui, Main:Add, DateTime, xm+605 ym+350 w345 vYesterday Choose%TodayDate% Hidden, yyyy.MM.dd | HH:mm:ss
     Gui, Main:Font, s15
-    Gui, Main:Add, DDL, xm+205 ym+90 vProfByName Hidden
+    Gui, Main:Add, DDL, xm+205 ym+90 vProfByName Hidden gGoLookUp
     Gui, Main:Add, Edit, xm+776 ym+90 -E0x200 ReadOnly vOAProfit w189 Hidden Border HwndE
     CtlColors.Attach(E, "00FF00", "000000")
     Gui, Main:Add, Edit, xm+586 ym+90 -E0x200 ReadOnly vCPr w189 Hidden Border HwndE
@@ -323,7 +323,7 @@ OpenApp:
     Gui, Main:Add, Text, xm+660 ym+85 vFixedToolTipCBText Hidden gRememberLogin, % _43
     Gui, Main:Add, Text, xm+660 ym+120 vMultiSelCBText Hidden gRememberLogin, % _65
     Gui, Main:Font, s15, Calibri
-    Gui, Main:Add, ListView, xm+205 ym+50 w400 r10 Grid vLV5 HwndHLV Hidden -Multi cBlue, N|P
+    Gui, Main:Add, ListView, xm+205 ym+50 w400 r10 Grid vLV5 HwndHLV Hidden -Multi cBlue, % _38 "|" _79
     Gui, Main:Default
     Gui, Main:ListView, LV5
     LV_ModifyCol(1, "198 Right")
@@ -451,6 +451,31 @@ Continue:
     Gui, % "About: +Resize +MaxSize198x" HeightH + 10 " MinSize198x" HeightH + 10
     SetTimer, About, 0
     GuiControl, Main:Focus, OpenMain
+Return
+
+GoLookUp:
+    Gui, Main:Submit, NoHide
+    LV_Delete()
+    OAPr := 0, SPr := 0, CP := 0
+    GuiControl, Main:, OAProfit, % OAPr
+    GuiControl, Main:, SPr, % SPr
+    GuiControl, Main:, CPr, % CP
+    If (ProfByName != "All") {
+        For Each, SO in ByName {
+            If (SubStr(Each, 1, InStr(Each, "_") - 1) = ProfByName) {
+                LV_Add(, SO[1], SO[2], SO[3], SO[4], SO[5])
+            }
+        }
+
+    } Else {
+        For Each, SO in ByName {
+            If InStr(Each, "_")
+                LV_Add(, SO[1], SO[2], SO[3], SO[4], SO[5])
+        }
+    }
+    GuiControl, Main:, OAProfit, % "+ " ByName[ProfByName][4] " " ConvertMillimsToDT(ByName[ProfByName][4], "+")
+    GuiControl, Main:, SPr, % "+ " ByName[ProfByName][2] " " ConvertMillimsToDT(ByName[ProfByName][2], "+")
+    GuiControl, Main:, CPr, % "- " ByName[ProfByName][3] " " ConvertMillimsToDT(ByName[ProfByName][3], "-")
 Return
 
 DisplayEqCurr:
@@ -702,7 +727,7 @@ CheckAndRun:
     SetTimer, Update, 250
     Gui, Main:+Resize +MinSize1000x500
     Gui, Main:Show, % "Maximize"
-    Gosub, % LabelName ? LabelName : A_GuiControl
+    Gosub, % A_GuiControl
     MM := 1
 Return
 
@@ -1227,15 +1252,19 @@ ClearDbc:
     If (Dbc ~= "[^0-9A-Za-z]") {
         CtlColors.Change(Dbc_, "FF8080", "000000")
         ShakeControl("Main", "Dbc")
+        Return
     }
+    GoSub, ^F
 Return
 ClearDnm:
     Gui, Main:Submit, NoHide
     CtlColors.Change(Dnm_, "FFFFFF", "000000")
     If (Dnm ~= "\[|\]|\;|\$|\||\/") {
         CtlColors.Change(Dnm_, "FF8080", "000000")
-    ShakeControl("Main", "Dnm")
-}
+        ShakeControl("Main", "Dnm")
+        Return
+    }
+    GoSub, ^F
 Return
 ClearDbp:
     Gui, Main:Submit, NoHide
@@ -1243,7 +1272,9 @@ ClearDbp:
     If (Dbp ~= "[^0-9]") {
         CtlColors.Change(Dbp_, "FF8080", "000000")
         ShakeControl("Main", "Dbp")
+        Return
     }
+    GoSub, ^F
 Return
 ClearDsp:
     Gui, Main:Submit, NoHide
@@ -1251,45 +1282,22 @@ ClearDsp:
     If (Dsp ~= "[^0-9]") {
         CtlColors.Change(Dsp_, "FF8080", "000000")
         ShakeControl("Main", "Dsp")
+        Return
     }
+    GoSub, ^F
 Return
 
+#If WinActive("ahk_id " Main) && (RMS ~= "#(0\.1|1|2|3|4|5|6|7)") && (Level = "Admin")
+F1::ControlClick, % RMS = "#0.1" ? "Button23" : "Button1", ahk_id %Main%,, Left
+F2::ControlClick, % RMS = "#0.1" ? "Button24" : "Button2", ahk_id %Main%,, Left
+F3::ControlClick, % RMS = "#0.1" ? "Button25" : "Button3", ahk_id %Main%,, Left
+F4::ControlClick, % RMS = "#0.1" ? "Button26" : "Button4", ahk_id %Main%,, Left
+F5::ControlClick, % RMS = "#0.1" ? "Button27" : "Button5", ahk_id %Main%,, Left
+F6::ControlClick, % RMS = "#0.1" ? "Button28" : "Button6", ahk_id %Main%,, Left
+F7::ControlClick, % RMS = "#0.1" ? "Button29" : "Button7", ahk_id %Main%,, Left
+#If
+
 #If WinActive("ahk_id " Main)
-F1::
-    LabelName := "OpenMain"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
-F2::
-    LabelName := "Submit"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
-F3::
-    LabelName := "Define"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
-F4::
-    LabelName := "StockPile"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
-F5::
-    LabelName := "Prof"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
-F6::
-    LabelName := "Manage"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
-F7::
-    LabelName := "Kridi"
-    GoSub, CheckAndRun
-    LabelName := ""
-Return
 ^s::
     If (RMS="#3") {
         Gui, Main:Submit, NoHide
@@ -1918,6 +1926,7 @@ Enter::
     }
     Sleep, 125
 Return
+#If
 
 Up::
     Gui, Main:Submit, NoHide
@@ -2291,6 +2300,8 @@ Correct(File) {
 
 LoadProf() {
     LV_Delete()
+    GuiControl, Main:, ProfByName, % "|"
+    GuiControl, Main:, ProfByName, % "All||"
     OAPr := 0, SPr := 0, CP := 0
     GuiControl, Main:, OAProfit, % OAPr
     GuiControl, Main:, SPr, % SPr
@@ -2312,8 +2323,8 @@ LoadProf() {
     GuiControl, Main:Show, PB
     GuiControl, Main:, PB, 0
     GuiControl, Main:+Range0-%Range%, PB
-    ByName := {}
-
+    Global ByName := {}
+    ByName["All"] := [0, 0, 0]
     Loop, Files, Valid\*.db, R F
     {
         ThisFileDate := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3)
@@ -2324,20 +2335,31 @@ LoadProf() {
                     MsgBox, 64, % A_LoopFileFullPath, % "Corrupted file: " A_LoopFileFullPath " `n" ClipBoard := RD
                 } Else {
                     If (RMS = "#5") {
-                        LV_Add("", A_LoopFileFullPath, Arr[1], "+ " Arr[2][1] "  " ConvertMillimsToDT(Arr[2][1], "+")
-                                                             , "- " Arr[2][2] "  " ConvertMillimsToDT(Arr[2][2], "-")
-                                                             , "+ " Arr[2][3] "  " ConvertMillimsToDT(Arr[2][3], "+"))
+                        LV_Add("", A_LoopFileFullPath, Arr[1], Arg1 := "+ " Arr[2][1] "  " ConvertMillimsToDT(Arr[2][1], "+")
+                                                             , Arg2 := "- " Arr[2][2] "  " ConvertMillimsToDT(Arr[2][2], "-")
+                                                             , Arg3 := "+ " Arr[2][3] "  " ConvertMillimsToDT(Arr[2][3], "+"))
+                        If ((Nm_Dte := StrSplit(Arr[1], "|")).Length() = 2) {
+                            If !ByName[Nm_Dte[1]][1] {
+                                ByName[Nm_Dte[1]] := [1, 0, 0, 0]
+                                GuiControl, Main:, ProfByName, % Nm_Dte[1]
+                            }
+                            ByName[Nm_Dte[1] "_" A_Index] := [A_LoopFileFullPath, Arr[1], Arg1, Arg2, Arg3]
+                            ByName[Nm_Dte[1]][2] += Arr[2][1]
+                            ByName[Nm_Dte[1]][3] += Arr[2][2]
+                            ByName[Nm_Dte[1]][4] += Arr[2][3]
+                        }
                     } Else {
                         Return
                     }
-                    SPr := Arr[2][1] + SPr
-                    CP := Arr[2][2] + CP
-                    OAPr := Arr[2][3] + OAPr
+                    SPr += Arr[2][1]
+                    CP += Arr[2][2]
+                    OAPr += Arr[2][3]
                 }
             }
         }
         GuiControl, Main:, PB, +1
     }
+
     Loop, Files, Curr\*.db
     {
         ThisFileDate := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 3)
@@ -2348,20 +2370,32 @@ LoadProf() {
                     LV_Add("", A_LoopFileFullPath, Arr[1], "+ " Arr[2][1] "  " ConvertMillimsToDT(Arr[2][1], "+")
                                                          , "- " Arr[2][2] "  " ConvertMillimsToDT(Arr[2][2], "-")
                                                          , "+ " Arr[2][3] "  " ConvertMillimsToDT(Arr[2][3], "+"))
+                    If ((Nm_Dte := StrSplit(Arr[1], "|")).Length() = 2) {
+                        
+                        If !ByName[Nm_Dte[1]][1] {
+                            ByName[Nm_Dte[1]] := [1, 0, 0, 0]
+                            GuiControl, Main:, ProfByName, % Nm_Dte[1]
+                        }
+                        ByName[Nm_Dte[1] "_" A_Index] := [A_LoopFileFullPath, Arr[1], Arg1, Arg2, Arg3]
+                        ByName[Nm_Dte[1]][2] += Arr[2][1]
+                        ByName[Nm_Dte[1]][3] += Arr[2][2]
+                        ByName[Nm_Dte[1]][4] += Arr[2][3]
+                    }
                 } Else {
                     Return
                 }
-                SPr := Arr[2][1] + SPr
-                CP := Arr[2][2] + CP
-                OAPr := Arr[2][3] + OAPr
+                SPr += Arr[2][1]
+                CP += Arr[2][2]
+                OAPr += Arr[2][3]
             }
         }
         GuiControl, Main:, PB, +1
     }
+    ByName["All"] := [1, SPr, CP, OAPr]
     GuiControl, Main:Hide, PB
-    GuiControl, Main:, OAProfit, % OAPr " " ConvertMillimsToDT(OAPr)
-    GuiControl, Main:, SPr, % SPr  " " ConvertMillimsToDT(SPr)
-    GuiControl, Main:, CPr, % CP  " " ConvertMillimsToDT(CP)
+    GuiControl, Main:, OAProfit, % "+ " OAPr " " ConvertMillimsToDT(OAPr, "+")
+    GuiControl, Main:, SPr, % "+ " SPr  " " ConvertMillimsToDT(SPr, "+")
+    GuiControl, Main:, CPr, % "- " CP  " " ConvertMillimsToDT(CP, "-")
 }
 
 ConvertMillimsToDT(Value, Sign := "") {
@@ -2751,16 +2785,17 @@ CheckForUpdates() {
         Return, _49
     FileDelete, Version.txt
     SetWorkingDir, % A_ScriptDir
-    If !InStr(Lastest, ".")
-        Lastest := Lastest ".0"
-        MsgBox, 36, % Lastest " " _50 , % _51 " " Lastest "?"
-        IfMsgBox, Yes
-        {
-            Progress, w400 FS10 ZH18, % _47, % _46, % "Cash Helper v" Ver, Calibri
-            SetWorkingDir, Update
-            DownloadFile(StrReplace(DL, "https://www.dropbox.com", "http://dl.dropboxusercontent.com"), "Cassier-Update.zip")
-        } Else
-            Return, "SUCCESS"
+    If (Lastest > Ver := Version()) {
+        If !InStr(Lastest, ".")
+            Lastest := Lastest ".0"
+            MsgBox, 36, % Lastest " " _50 , % _51 " " Lastest "?"
+            IfMsgBox, Yes
+            {
+                Progress, w400 FS10 ZH18, % _47, % _46, % "Cash Helper v" Ver, Calibri
+                SetWorkingDir, Update
+                DownloadFile(StrReplace(DL, "https://www.dropbox.com", "http://dl.dropboxusercontent.com"), "Cassier-Update.zip")
+            } Else
+                Return, "SUCCESS"
     } Else {
         MsgBox,,, % _45
     }
