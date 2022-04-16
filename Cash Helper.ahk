@@ -154,6 +154,10 @@ OpenApp:
 
     Gui, Main:Add, Edit, xm ym+150 vTU w178 Center HwndE h28 -E0x200
     CtlColors.Attach(E, "FFFFFF", "000000")
+    Gui, Main:Font, s10
+    Gui, Main:Add, CheckBox, xp yp+20 vRemLogin HWNDCB gRememberLogin, % _32
+    CtlColors.Attach(CB, "B2B2B2", "FF0000")
+    Gui, Main:Font, s13
     Gui, Main:Add, Edit, xm+200 ym+170 vTP w178 Center Password HwndTP_ h28 -E0x200
     CtlColors.Attach(TP_, "FFFFFF", "FF0000")
     Gui, Main:Add, Button, xm+400 ym+170 w178 HwndBtn vLogin gEnter h28, % _35
@@ -230,6 +234,7 @@ OpenApp:
                                , [0, 0x008000, , 0xFFFF00, 0, , 0x008000, 4]
                                , [0, 0xB2B2B2, , 0x000000, 0, , 0x000000, 2]]* )
     Gui, Main:Add, DDL, xm+205 y70 w300 vCurrents Hidden gDisplayEqCurr, % _74 "||"
+
     Gui, Main:Add, ListView, xm+205 y120 w760 r10 Grid vLV1 HwndHLV Hidden -Multi, % _70 "|" _71 "|" _79
     Gui, Main:Default
     Gui, Main:ListView, LV1
@@ -319,7 +324,7 @@ OpenApp:
     LV_ModifyCol(5, "189")
 
 
-    ManageCtrlList := "UserName,UserPass,LV5,CheckForUpdatesCB1,CheckForUpdatesCB2,CheckForUpdatesCB3,RememberLoginCB1,RememberLoginCB2,RememberLoginCB3,CheckForUpdatesCBText,RememberLoginCBText"
+    ManageCtrlList := "UserName,UserPass,LV5,CheckForUpdatesCB1,CheckForUpdatesCB2,CheckForUpdatesCB3"
                     . ",FixedToolTipCB1,FixedToolTipCB2,FixedToolTipCB3,FixedToolTipCBText"
                     . ",MultiSelCB1,MultiSelCB2,MultiSelCB3,MultiSelCBText"
 
@@ -330,10 +335,6 @@ OpenApp:
     Gui, Main:Add, Text, xm+615 y20 w32 h33 0x6 vCheckForUpdatesCB1 Hidden
     Gui, Main:Add, Text, xp yp w33 h33 0x12 vCheckForUpdatesCB2 Hidden
     Gui, Main:Add, Text, xp yp w33 h33 0x200 BackgroundTrans Center cGreen vCheckForUpdatesCB3 gCheckForUpdates Hidden
-    Global RememberLogin
-    Gui, Main:Add, Text, xm+615 y55 w32 h33 0x6 vRememberLoginCB1 Hidden
-    Gui, Main:Add, Text, xp yp w33 h33 0x12 vRememberLoginCB2 Hidden
-    Gui, Main:Add, Text, xp yp w33 h33 0x200 BackgroundTrans Center cGreen vRememberLoginCB3 gRememberLogin Hidden
     Global FixedToolTip
     Gui, Main:Add, Text, xm+615 y90 w32 h33 0x6 vFixedToolTipCB1 Hidden
     Gui, Main:Add, Text, xp yp w33 h33 0x12 vFixedToolTipCB2 Hidden
@@ -370,12 +371,13 @@ OpenApp:
     Gui, Main:Font, s15
     Gui, Main:Show, % "w800 h78"
 
-    IniRead, Log, Setting.ini, OtherSetting, RemUser
+    ;IniRead, Log, Setting.ini, OtherSetting, RemUser
     OldLog := StrSplit(DB_Read("Sets\RL.db"), ";")
 
-    If (OldLog[1] = Log) {
+    If (OldLog[1] != "") && (OldLog[2] != "") {
         GuiControl, Main:, TU, % OldLog[1]
         GuiControl, Main:, TP, % OldLog[2]
+        GuiControl, Main:, RemLogin, 1
         GuiControl, Main:Focus, TP
     }
     Return
@@ -691,17 +693,13 @@ Return
 
 RememberLogin:
     Gui, Main:Submit, NoHide
-    If (RememberLogin := !RememberLogin) {
-        IniWrite, % TP, Setting.ini, OtherSetting, RemUser
-        DB_Write("Sets\RL.db", TP ";" TU)
-        GuiControl, Main:, RememberLoginCB3, % Chr(252)
+    If (RemLogin) {
+        If (DB_Read("Sets\RL.db") != TU ";" TP)
+            DB_Write("Sets\RL.db", TU ";" TP)
     } Else {
-        IniWrite, % "", Setting.ini, OtherSetting, RemUser
         FileDelete, Sets\RL.db
-        GuiControl, Main:, RememberLoginCB3
     }
 Return
-;CheckForUpdatesCB3
 CheckForUpdates:
     Gui, Main:Submit, NoHide
     If (CheckForUpdates := !CheckForUpdates) {
@@ -943,12 +941,14 @@ MainGuiSize:
         GuiControl, Main:+Redraw, % "Prt" A_Index
     }
     If (RMS = "#0") {
-        GuiControl, Main:Move, TU, % "y" Height - 45
+        GuiControl, Main:Move, TU, % "y" Height - 52
         GuiControl, Main:+Redraw, TU
-        GuiControl, Main:Move, TP, % "y" Height - 45
+        GuiControl, Main:Move, TP, % "y" Height - 52
         GuiControl, Main:+Redraw, TP
-        GuiControl, Main:Move, Login, % "y" Height - 45
+        GuiControl, Main:Move, Login, % "y" Height - 52
         GuiControl, Main:+Redraw, Login
+        GuiControl, Main:Move, RemLogin, % "y" Height - 22
+        GuiControl, Main:+Redraw, RemLogin
         GuiControl, Main:Move, % "TText", % "x0 w" Width
         GuiControl, Main:+Redraw, TText
     }
@@ -1394,13 +1394,13 @@ ClearDsp:
 Return
 
 #If WinActive("ahk_id " Main) && (RMS ~= "#(0\.1|1|2|3|4|5|6|7)") && (Level = "Admin")
-F1::ControlClick, % RMS = "#0.1" ? "Button22" : "Button1", ahk_id %Main%,, Left
-F2::ControlClick, % RMS = "#0.1" ? "Button23" : "Button2", ahk_id %Main%,, Left
-F3::ControlClick, % RMS = "#0.1" ? "Button24" : "Button3", ahk_id %Main%,, Left
-F4::ControlClick, % RMS = "#0.1" ? "Button25" : "Button4", ahk_id %Main%,, Left
-F5::ControlClick, % RMS = "#0.1" ? "Button26" : "Button5", ahk_id %Main%,, Left
-F6::ControlClick, % RMS = "#0.1" ? "Button27" : "Button6", ahk_id %Main%,, Left
-F7::ControlClick, % RMS = "#0.1" ? "Button28" : "Button7", ahk_id %Main%,, Left
+F1::ControlClick, % RMS = "#0.1" ? "Button24" : ((RMS != "#1") ? "Button1" : ""), ahk_id %Main%,, Left
+F2::ControlClick, % RMS = "#0.1" ? "Button25" : ((RMS != "#2") ? "Button2" : ""), ahk_id %Main%,, Left
+F3::ControlClick, % RMS = "#0.1" ? "Button26" : ((RMS != "#3") ? "Button3" : ""), ahk_id %Main%,, Left
+F4::ControlClick, % RMS = "#0.1" ? "Button27" : ((RMS != "#4") ? "Button4" : ""), ahk_id %Main%,, Left
+F5::ControlClick, % RMS = "#0.1" ? "Button28" : ((RMS != "#5") ? "Button5" : ""), ahk_id %Main%,, Left
+F6::ControlClick, % RMS = "#0.1" ? "Button29" : ((RMS != "#6") ? "Button6" : ""), ahk_id %Main%,, Left
+F7::ControlClick, % RMS = "#0.1" ? "Button30" : ((RMS != "#7") ? "Button7" : ""), ahk_id %Main%,, Left
 #If
 
 #If WinActive("ahk_id " Main)
@@ -1879,6 +1879,13 @@ Enter::
                 GuiControl, Main:Show, Reload
                 GuiControl, Main:Hide, Login
                 GuiControl, Main:Hide, TText
+                GuiControl, Main:Hide, RemLogin
+                If (RemLogin) {
+                    If (DB_Read("Sets\RL.db") != TU ";" TP)
+                        DB_Write("Sets\RL.db", TU ";" TP)
+                } Else {
+                    FileDelete, Sets\RL.db
+                }
                 Level := "Admin"
                 RMS := "#0.1"
                 ;SaveLogIn()
@@ -1898,6 +1905,13 @@ Enter::
                     GuiControl, Main:Show, Reload
                     GuiControl, Main:Hide, Login
                     GuiControl, Main:Hide, TText
+                    GuiControl, Main:Hide, RemLogin
+                    If (RemLogin) {
+                        If (DB_Read("Sets\RL.db") != TU ";" TP)
+                            DB_Write("Sets\RL.db", TU ";" TP)
+                    } Else {
+                        FileDelete, Sets\RL.db
+                    }
                     Level := "User"
                     RMS := "#0.1"
                     ;SaveLogIn()
@@ -2441,17 +2455,11 @@ LoadProf() {
     GuiControl, Main:, CPr, % CP
     
     Global Today, Yesterday
-    ;Msgbox % Today "," Yesterday
-    Range := 0, SysOBJ := ComObjCreate("Scripting.FileSystemObject")
-    Loop, Files, Valid\*, D 
-    {
-        If (RMS = "#5") {
-            Range += SysOBJ.GetFolder(A_LoopFileFullPath).Files.Count
-        } Else {
-            Return
-        }
-    }
-    Range += SysOBJ.GetFolder("Curr").Files.Count
+    Range := 0
+    ClipSave := ClipBoard
+    RunWait, Count.bat,, Hide
+    Range := RegExReplace(Clipboard, "\D+")
+    ClipBoard := ClipSave
 
     GuiControl, Main:Show, PB
     GuiControl, Main:, PB, 0
@@ -3480,4 +3488,14 @@ CalculateTotal(Folder) {
         Total += StrSplit(StrSplit(DB_Read(A_LoopFileFullPath), "> ")[3], ";")[1]
     }
     Return, Total
+}
+
+RunWaitMany(commands) {
+    shell := ComObjCreate("WScript.Shell")
+    ; Open cmd.exe with echoing of commands disabled
+    exec := shell.Exec(ComSpec " /Q /K echo off")
+    ; Send the commands to execute, separated by newline
+    exec.StdIn.WriteLine(commands "`nexit")  ; Always exit at the end!
+    ; Read and return the output of all commands
+    return exec.StdOut.ReadAll()
 }
