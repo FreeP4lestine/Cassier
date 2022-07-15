@@ -17,7 +17,6 @@ SendMode Input
 #Include, Lib\GUIKridi.ahk
 #Include, Lib\GUIDBFile.ahk
 #Include, Lib\GUIUsers.ahk
-#Include, Lib\GUISell.ahk
 #Include, Lib\GUIEnsure.ahk
 #Include, Lib\GUIDefine.ahk
 #Include, Lib\GUIStock.ahk
@@ -39,7 +38,6 @@ Return
 #Include, Lib\GUIUsers_A.ahk
 
 #Include, Lib\WriteLicense.ahk
-#Include, Lib\GUISell_A.ahk
 #Include, Lib\GUIEnsure_A.ahk
 #Include, Lib\GUIDefine_A.ahk
 #Include, Lib\GUIStock_A.ahk
@@ -2396,7 +2394,6 @@ RandomHexColor() {
     }
 Return, Seq
 }
-
 
 LoadDefinitions(Data) {
     Tmp := {}

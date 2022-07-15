@@ -162,20 +162,11 @@ NextLog:
                               , [0, "Img\OM\2.png",, 0x0080FF]
                               , [0, "Img\OM\3.png",, 0xFF0000]
                               , [0, "Img\OM\4.png"]]*)
-    Gui, Main:+Resize +HwndMain
-    Gui, Main:Margin, 10, 10
-    Gui, Main:Color, 0xD8D8AD
-    Gui, Main:Font, s12 Bold, Calibri
-    Gui, Main:Add, Button, % "x" A_ScreenWidth - 120 " y" A_ScreenHeight - 110 " w101 h35 HwndHCtrl gLaunchKeyboard"
-    ImageButton.Create(HCtrl, [[0, "Img\KBD\1.png"]
-                             , [0, "Img\KBD\2.png"]
-                             , [0, "Img\KBD\3.png"]
-                             , [0, "Img\KBD\4.png"]]*)
-    Gui, Main:Add, Button, xm ym HwndHCtrl w192 h40 gOpenMain Left vOpenMain1, % "                " _115
-    ImageButton.Create(HCtrl, [[0, "Img\LMBOM\1.png"]
-                             , [0, "Img\LMBOM\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                             , [0, "Img\LMBOM\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                             , [0, "Img\LMBOM\4.png"]]*)
+    ;Gui, Main:Add, Button, xm ym HwndHCtrl w192 h40 gOpenMain Left vOpenMain1, % "                " _115
+    ;ImageButton.Create(HCtrl, [[0, "Img\LMBOM\1.png"]
+    ;                         , [0, "Img\LMBOM\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+    ;                         , [0, "Img\LMBOM\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+    ;                         , [0, "Img\LMBOM\4.png"]]*)
     If InStr(RD, ";") {
         Gui, Startup:Add, Button, xp+150 yp w140 h90 gSubmit HwndHCtrl vSubmit, % "`n`n`n" _116
         ImageButton.Create(HCtrl, [ [0, "Img\ED\1.png"]
@@ -202,51 +193,51 @@ NextLog:
                                   , [0, "Img\KR\2.png",, 0x0080FF]
                                   , [0, "Img\KR\3.png",, 0xFF0000]
                                   , [0, "Img\KR\4.png"]]*)
-        Gui, Startup:Add, Button, xp+150 yp w140 h90 gManage HwndHCtrl vManage, % "`n`n`n" _120
-        ImageButton.Create(HCtrl, [ [0, "Img\MN\1.png"]
-                                  , [0, "Img\MN\2.png",, 0x0080FF]
-                                  , [0, "Img\MN\3.png",, 0xFF0000]
-                                  , [0, "Img\MN\4.png"]]*)
-        Gui, Startup:Add, Button, xp+150 yp w140 h90 gProgress HwndHCtrl vProgress, % "`n`n`n" _163
-        ImageButton.Create(HCtrl, [ [0, "Img\PG\1.png"]
-                                  , [0, "Img\PG\2.png",, 0x0080FF]
-                                  , [0, "Img\PG\3.png",, 0xFF0000]
-                                  , [0, "Img\PG\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gSubmit Left vSubmit1, % "                " _116
-        ImageButton.Create(HCtrl, [[0, "Img\LMBED\1.png"]
-                                 , [0, "Img\LMBED\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBED\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBED\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gDefine Left vDefine1, % "                " _117
-        ImageButton.Create(HCtrl, [[0, "Img\LMBDE\1.png"]
-                                 , [0, "Img\LMBDE\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBDE\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBDE\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gStockPile Left vStockpile1, % "                " _118
-        ImageButton.Create(HCtrl, [[0, "Img\LMBST\1.png"]
-                                 , [0, "Img\LMBST\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBST\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBST\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gProf Left vProf1, % "                " _119
-        ImageButton.Create(HCtrl, [[0, "Img\LMBPR\1.png"]
-                                 , [0, "Img\LMBPR\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBPR\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBPR\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gKridi Left vKridi1, % "                " _121
-        ImageButton.Create(HCtrl, [[0, "Img\LMBKR\1.png"]
-                                 , [0, "Img\LMBKR\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBKR\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBKR\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gManage Left vManage1, % "                " _120
-        ImageButton.Create(HCtrl, [[0, "Img\LMBMN\1.png"]
-                                 , [0, "Img\LMBMN\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBMN\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBMN\4.png"]]*)
-        Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gProgress Left vProgress1, % "                " _163
-        ImageButton.Create(HCtrl, [[0, "Img\LMBPG\1.png"]
-                                 , [0, "Img\LMBPG\2.png",, 0x0080FF, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBPG\3.png",, 0xFF0000, 3, , 0xD8D8AD]
-                                 , [0, "Img\LMBPG\4.png"]]*)
+        ;Gui, Startup:Add, Button, xp+150 yp w140 h90 gManage HwndHCtrl vManage, % "`n`n`n" _120
+        ;ImageButton.Create(HCtrl, [ [0, "Img\MN\1.png"]
+        ;                          , [0, "Img\MN\2.png",, 0x0080FF]
+        ;                          , [0, "Img\MN\3.png",, 0xFF0000]
+        ;                          , [0, "Img\MN\4.png"]]*)
+        ;Gui, Startup:Add, Button, xp+150 yp w140 h90 gProgress HwndHCtrl vProgress, % "`n`n`n" _163
+        ;ImageButton.Create(HCtrl, [ [0, "Img\PG\1.png"]
+        ;                          , [0, "Img\PG\2.png",, 0x0080FF]
+        ;                          , [0, "Img\PG\3.png",, 0xFF0000]
+        ;                          , [0, "Img\PG\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gSubmit Left vSubmit1, % "                " _116
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBED\1.png"]
+        ;                         , [0, "Img\LMBED\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBED\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBED\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gDefine Left vDefine1, % "                " _117
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBDE\1.png"]
+        ;                         , [0, "Img\LMBDE\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBDE\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBDE\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gStockPile Left vStockpile1, % "                " _118
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBST\1.png"]
+        ;                         , [0, "Img\LMBST\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBST\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBST\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gProf Left vProf1, % "                " _119
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBPR\1.png"]
+        ;                         , [0, "Img\LMBPR\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBPR\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBPR\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gKridi Left vKridi1, % "                " _121
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBKR\1.png"]
+        ;                         , [0, "Img\LMBKR\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBKR\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBKR\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gManage Left vManage1, % "                " _120
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBMN\1.png"]
+        ;                         , [0, "Img\LMBMN\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBMN\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBMN\4.png"]]*)
+        ;Gui, Main:Add, Button, xp yp+42 HwndHCtrl w192 h40 gProgress Left vProgress1, % "                " _163
+        ;ImageButton.Create(HCtrl, [[0, "Img\LMBPG\1.png"]
+        ;                         , [0, "Img\LMBPG\2.png",, 0x0080FF, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBPG\3.png",, 0xFF0000, 3, , 0xD8D8AD]
+        ;                         , [0, "Img\LMBPG\4.png"]]*)
     }
     Loop, 10 {
         Gui, Main:Add, Text, % "y" A_Index + 10 " x" 210 + A_Index " w" A_ScreenWidth - 410 " h1 HwndHCtrl"

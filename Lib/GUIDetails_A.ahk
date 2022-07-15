@@ -4,7 +4,7 @@
 */
 ;///////////////////////////////////////////////////////////////////////////////
 DisplayDetails:
-    Gui, Details:Submit, NoHide
+    GuiControlGet, ReInLB,, ReInLB
     If (ReInLB) {
         GuiControl, Details:, DInfo, % _27 ": " ReInArr[ReInLB][1]
         . "`n" _38 ": " ReInArr[ReInLB][2]
