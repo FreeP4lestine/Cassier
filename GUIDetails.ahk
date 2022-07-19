@@ -1,11 +1,4 @@
-;///////////////////////////////////////////////////////////////////////////////
-/*
-    Setup Details GUI
-*/
-;///////////////////////////////////////////////////////////////////////////////
-
 #SingleInstance, Force
-
 #Include, Lib\Language.ahk
 
 Gui, Color, 0xD8D8AD
@@ -46,8 +39,11 @@ GuiControl,, OverAll, % OverAll " " ConvertMillimsToDT(OverAll)
 
 If (Content[4]) {
     AddInfo := StrSplit(Content[4], ";")
+    If (AddInfo[1])
     GuiControl,, Remise, % AddInfo[1] " %"
+    If (AddInfo[2])
     GuiControl,, Client, % AddInfo[2]
+    If (AddInfo[3])
     GuiControl,, SellDesc, % AddInfo[3]
 }
 
@@ -56,4 +52,3 @@ Return
 
 #Include, GUIDetails_Labels.ahk
 #Include, GUIDetails_Functions.ahk
-;///////////////////////////////////////////////////////////////////////////////

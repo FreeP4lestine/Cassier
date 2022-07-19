@@ -165,4 +165,7 @@ _163    :=      "Progress"
 _164    :=      "This Payement"
 _165    :=      "Failed to download from Github!"
 _166    :=      "Invalid input data!"
+_167    :=      "Add Cart"
+_168    :=      "Submit"
+_169    :=      "Cancel"
 ;////////////////////////////////////////////////////////////////////////////////////////////////////

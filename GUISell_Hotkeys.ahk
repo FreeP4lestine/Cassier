@@ -1,8 +1,3 @@
-;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-    Sell GUI hotkeys
-*/
-;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #If WinActive("ahk_id " Main)
     Enter::
         GuiControlGet, Bc, , Bc
@@ -72,10 +67,10 @@
 
             Obj.Write("> " Sum ";" Cost ";" Sum - Cost)
 
-            If (AdditionalInfo) {
-                GuiControlGet, Remise, , Remise
-                GuiControlGet, Client, , Client
-                GuiControlGet, SellDesc, , SellDesc
+            GuiControlGet, Remise, , Remise
+            GuiControlGet, Client, , Client
+            GuiControlGet, SellDesc, , SellDesc
+            If (AdditionalInfo) && (Remise || Client || SellDesc) {
                 Obj.Write("> " Remise ";" Client ";" SellDesc)
             }
             Obj.Close()
@@ -86,9 +81,11 @@
                     FileCreateDir, % "KR\" KName
                 }
                 FileCopy, % LastestSO, % "KR\" KName
+                If FileExist("Dump\kridi.OK")
+                    FileDelete, Dump\kridi.OK
             }
 
-            CharView()
+            CartView()
             WriteSession()
             CalculateSum()
 
@@ -98,6 +95,7 @@
         GuiControl, Enabled, Bc
         GuiControl, , Bc
         GuiControl, Focus, Bc
+        CheckListView()
         Sleep, 125
     Return
 
@@ -114,9 +112,13 @@
                     AllSum += ThisAllSum
                 }
                 GuiControl, , AllSum, % AllSum
+                GuiControl, Disabled, AddEnter
+                GuiControl, Enabled, SubKridi
                 GuiControl, Focus, GivenMoney
                 CalculateSum()
                 Selling := 1
+            } Else {
+                GuiControl, Focus, Bc
             }
         }
         Sleep, 125
@@ -137,7 +139,7 @@
 
         RestoreSession()
         CalculateSum()
-
+        CheckListView()
         Sleep, 125
     Return
 
@@ -156,7 +158,7 @@
 
         RestoreSession()
         CalculateSum()
-
+        CheckListView()
         Sleep, 125
     Return
 
@@ -215,6 +217,11 @@
             CalculateSum()
             WriteSession()
         }
+        CheckListView()
+    Return
+
+    Esc::
+        CartView()
+        WriteSession()
     Return
 #If
-;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

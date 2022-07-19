@@ -1,9 +1,4 @@
-﻿;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-    Setup sell GUI
-*/
-;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#SingleInstance, Force
+﻿#SingleInstance, Force
 
 #Include, Lib\Classes\Class_CtlColors.ahk
 #Include, Lib\Classes\Class_ImageButton.ahk
@@ -15,6 +10,9 @@ Gui, +HwndMain
 Gui, Margin, 10, 10
 Gui, Color, 0xD8D8AD
 Gui, Font, s18 Bold, Calibri
+
+Gui, Add, ListBox, xm ym w190 h300 vSearch
+
 Gui, Add, Button, % "x" A_ScreenWidth - 120 " y" A_ScreenHeight - 110 " w101 h35 HwndHCtrl gLaunchKeyboard"
 ImageButton.Create(HCtrl, [[0, "Img\KBD\1.png"]
                          , [0, "Img\KBD\2.png"]
@@ -25,22 +23,41 @@ Gui, Add, Edit, % "xm y" A_ScreenHeight - 340 " HwndE w190 vItemsSold -E0x200 Re
 Gui, Add, Edit, % "xp yp+" 40 " HwndE w190 vSoldP -E0x200 r2 ReadOnly Center Border -VScroll Hidden cGreen", 0
 Gui, Add, Edit, % "xp yp+" 70 " HwndE w190 vCostP -E0x200 r2 ReadOnly Center Border -VScroll Hidden cRed", 0
 Gui, Add, Edit, % "xp yp+" 70 " HwndE w190 vProfitP -E0x200 r2 ReadOnly Center Border -VScroll Hidden cGreen", 0
-Gui, Font, s18
-
-Gui, Add, Button, % "x" 230 + (A_ScreenWidth - 235) / 3 " y31 vAddEnter gEnter  w48 h46 HwndHCtrl"
-ImageButton.Create(HCtrl, [ [0, "Img\AC\1.png"]
-, [0, "Img\AC\2.png"]
-, [0, "Img\AC\3.png"]
-, [0, "Img\AC\4.png"]]* )
 Gui, Font, s15
-Gui, Add, Button, % "x225 y30 vSubKridi gSubKridi HwndHCtrl w100 Hidden", % _29
-ImageButton.Create(HCtrl, [[0, 0xFFFFFF, , 0x008000, 0, , 0x008000, 1]
-                         , [0, 0x008000, , 0xFFFFFF, 0, , 0x008000, 1]
-                         , [0, 0x008000, , 0xFFFF00, 0, , 0x008000, 1]
-                         , [0, 0xB2B2B2, , 0xFFFFFF, 0, , 0x000000, 2]]* )
+
+Gui, Add, Button, % "xm ym+" 310 " vAddEnter gEnter w190 h30 HwndHCtrl", % _167
+ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
+                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
+                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
+                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+
+Gui, Add, Button, % "vAddSell gSpace w190 h30 HwndHCtrl Disabled", % _115
+ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
+                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
+                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
+                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+
+Gui, Add, Button, % "vAddSubmit gEnter w190 h30 HwndHCtrl Disabled", % _168
+ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
+                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
+                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
+                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+
+Gui, Add, Button, % "vSubKridi gSubKridi HwndHCtrl w190 h30 Disabled", % _29
+ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
+                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
+                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
+                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+
+Gui, Add, Button, % "vCancel gCartView HwndHCtrl w190 h30", % _169
+ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
+                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
+                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
+                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+
 Gui, Font, s25
 pw := (A_ScreenWidth - 235) / 3
-Gui, Add, Edit, % "xp yp+55 w" pw " h45 vGivenMoney -E0x200 gCalc Center Border Hidden"
+Gui, Add, Edit, % "x225 ym+55 w" pw " h45 vGivenMoney -E0x200 gCalc Center Border Hidden"
 Gui, Add, Edit, % "xp+" pw " yp wp h45 vAllSum HwndAS -E0x200 ReadOnly Center Border cGreen Hidden"
 Gui, Add, Edit, % "xp+" pw " yp wp h45 vChange HwndC -E0x200 ReadOnly Center Border cRed Hidden"
 
@@ -152,4 +169,3 @@ Return
 #Include, GUISell_Hotkeys.ahk
 #Include, GUISell_Functions.ahk
 #Include, GUISell_Labels.ahk
-;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

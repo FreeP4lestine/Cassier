@@ -20,6 +20,7 @@ RestoreSession() {
         Obj.Close()
     }
     GuiControl, Focus, Bc
+    CheckListView()
 }
 
 WriteSession() {
@@ -80,7 +81,14 @@ CalculateSum() {
     }
 }
 
-CharView() {
+CartView() {
+    Global Selling
+    Selling := 0
+    GuiControl, Enabled, AddEnter
+    GuiControl, Disabled, SubKridi
+    GuiControl, Disabled, AddSubmit
+    GuiControl, Disabled, AddSell
+    GuiControl, Disabled, Cancel
     GuiControl, , AllSum
     GuiControl, , Change
     GuiControl, , GivenMoney
@@ -91,24 +99,29 @@ CharView() {
     GuiControl, Show, Nm
     GuiControl, Show, Qn
     GuiControl, Show, Sum
-    GuiControl, Show, AddEnter
-    GuiControl, Hide, SubKridi
     GuiControl, , Remise
     GuiControl, , Client
     GuiControl, , SellDesc
     LV_Delete()
+    GuiControl, Focus, Bc
 }
 
 SellView() {
+    Global Selling
+    Selling := 1
+    GuiControl, Enabled, AddSubmit
+    GuiControl, Disabled, AddEnter
+    GuiControl, Enabled, Cancel
+    GuiControl, Disabled, AddSell
+    GuiControl, Enabled, SubKridi
     GuiControl, Hide, Bc
     GuiControl, Hide, Nm
     GuiControl, Hide, Qn
     GuiControl, Hide, Sum
-    GuiControl, Hide, AddEnter
-    GuiControl, Show, SubKridi
     GuiControl, Show, GivenMoney
     GuiControl, Show, AllSum
     GuiControl, Show, Change
+    GuiControl, Focus, GivenMoney
 }
 
 TrancsView(Tranc, View) {
@@ -129,5 +142,16 @@ TrancsView(Tranc, View) {
     } Else {
         GuiControl, Hide, Transc
         GuiControl, Hide, TranscOK
+    }
+}
+
+CheckListView() {
+    GuiControlGet, AddSell, Enabled, AddSell
+    If LV_GetCount() {
+        If !AddSell
+            GuiControl, Enabled, AddSell
+    } Else {
+        If AddSell
+            GuiControl, Disabled, AddSell
     }
 }
