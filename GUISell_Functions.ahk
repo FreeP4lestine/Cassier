@@ -149,19 +149,25 @@ CheckListView() {
     GuiControlGet, AddSell, Enabled, AddSell
     GuiControlGet, Cancel, Enabled, Cancel
     If LV_GetCount() {
-        If !AddSell
+        If (!AddSell)
             GuiControl, Enabled, AddSell
-        If !Cancel
+        If (!Cancel)
             GuiControl, Enabled, Cancel
     } Else {
-        If AddSell
+        If (AddSell)
             GuiControl, Disabled, AddSell
-        If Cancel
+        If (Cancel)
             GuiControl, Disabled, Cancel
     }
 }
 
 CheckBarcode() {
-    
-    GuiControl, Disabled, AddEnter
+    GuiControlGet, Bc,, Bc
+    GuiControlGet, AddEnter, Enabled, AddEnter
+    If (Bc != "") {
+        If (!AddEnter)
+            GuiControl, Enabled, AddEnter
+    } Else If (AddEnter) {
+        GuiControl, Disabled, AddEnter
+    }
 }

@@ -223,5 +223,18 @@
     Esc::
         CartView()
         WriteSession()
+        CheckBarcode()
+    Return
+
+    ^F::
+        GuiControlGet, Bc,, Bc
+        GuiControl,, Search, |
+        SearchList := []
+        For Every, Product in ProdDefs {
+            If InStr(Product["Name"], Bc) {
+                SearchList.Push("" Every "")
+                GuiControl, , Search, % Product["Name"]
+            }
+        }
     Return
 #If

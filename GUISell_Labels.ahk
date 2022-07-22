@@ -33,19 +33,20 @@ Return
 
 AnalyzeAvail:
     GuiControlGet, Bc,, Bc
-    GuiControl, , Nm
-    GuiControl, , Sum
-    GuiControl, , Qn
-    If (Bc = "") {
-        If (AddEnter) {
-            GuiControl, Disabled, AddEnter
+    If (Bc != "") {
+        If (ProdDefs.HasKey("" Bc "")) {
+            GuiControl, , Nm,   % ProdDefs["" Bc ""]["Name"]
+            GuiControl, , Qn,   % ProdDefs["" Bc ""]["Quantity"]
+            GuiControl, , Sum,  % ProdDefs["" Bc ""]["SellPrice"]
+        } Else {
+            GuiControl, , Nm
+            GuiControl, , Sum
+            GuiControl, , Qn
         }
-        Return
-    }
-    If (ProdDefs.HasKey("" Bc "")) {
-        GuiControl, , Nm, % ProdDefs["" Bc ""]["Name"]
-        GuiControl, , Qn, % ProdDefs["" Bc ""]["Quantity"]
-        GuiControl, , Sum, % ProdDefs["" Bc ""]["SellPrice"]
+    } Else {
+        GuiControl, , Nm
+        GuiControl, , Sum
+        GuiControl, , Qn
     }
     CheckBarcode()
 Return
@@ -222,4 +223,11 @@ Session10:
 
     RestoreSession()
     CalculateSum()
+Return
+
+WriteToBc:
+    GuiControlGet, Search,, Search
+    If (Search) {
+        GuiControl,, Bc, % SearchList[Search]
+    }
 Return
