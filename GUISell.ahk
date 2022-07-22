@@ -49,7 +49,7 @@ ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
                          , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
                          , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
 
-Gui, Add, Button, % "vCancel gCartView HwndHCtrl w190 h30", % _169
+Gui, Add, Button, % "vCancel gEsc HwndHCtrl w190 h30 Disabled", % _169
 ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
                          , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
                          , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]

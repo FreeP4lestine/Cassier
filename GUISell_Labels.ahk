@@ -37,6 +37,9 @@ AnalyzeAvail:
     GuiControl, , Sum
     GuiControl, , Qn
     If (Bc = "") {
+        If (AddEnter) {
+            GuiControl, Disabled, AddEnter
+        }
         Return
     }
     If (ProdDefs.HasKey("" Bc "")) {
@@ -44,6 +47,7 @@ AnalyzeAvail:
         GuiControl, , Qn, % ProdDefs["" Bc ""]["Quantity"]
         GuiControl, , Sum, % ProdDefs["" Bc ""]["SellPrice"]
     }
+    CheckBarcode()
 Return
 
 Remise:

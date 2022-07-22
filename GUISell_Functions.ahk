@@ -147,11 +147,21 @@ TrancsView(Tranc, View) {
 
 CheckListView() {
     GuiControlGet, AddSell, Enabled, AddSell
+    GuiControlGet, Cancel, Enabled, Cancel
     If LV_GetCount() {
         If !AddSell
             GuiControl, Enabled, AddSell
+        If !Cancel
+            GuiControl, Enabled, Cancel
     } Else {
         If AddSell
             GuiControl, Disabled, AddSell
+        If Cancel
+            GuiControl, Disabled, Cancel
     }
+}
+
+CheckBarcode() {
+    
+    GuiControl, Disabled, AddEnter
 }
