@@ -11,8 +11,8 @@ Gui, Margin, 10, 10
 Gui, Color, 0xD8D8AD
 Gui, Font, s15 Bold, Calibri
 
-Gui, Add, ListBox, xm ym w190 h250 vSearch gWriteToBc AltSubmit HwndHCtrl
-CtlColors.Attach(HCtrl, "D8D8AD")
+Gui, Add, ListBox, xm ym w190 r10 vSearch gWriteToBc AltSubmit HwndHCtrl
+CtlColors.Attach(HCtrl, "717100", "FFFFFF")
 
 Gui, Font, s18
 Gui, Add, Button, % "x" A_ScreenWidth - 120 " y" A_ScreenHeight - 110 " w101 h35 HwndHCtrl gLaunchKeyboard"
@@ -167,6 +167,7 @@ If FileExist("Dump\" Session ".session") {
     CalculateSum()
     CheckBarcode()
 }
+CheckLatestSells()
 Return
 
 #Include, GUISell_Hotkeys.ahk

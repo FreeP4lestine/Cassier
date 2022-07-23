@@ -33,8 +33,12 @@
             }
         } Else {
             FormatTime, OutTime, % (Now := A_Now), yyyy/MM/dd HH:mm:ss
-            Obj := FileOpen(LastestSO := "Curr\" Now ".sell", "w")
+            Obj     := FileOpen(LastestSO := "Curr\" Now ".sell", "w")
             Obj.Write(AdminName "|" OutTime)
+
+            IniRead, Counter, Dump\Last10S.ini, Counter, Counter
+            If Counter is not Digit
+                Counter := 0
             Loop, % LV_GetCount() {
                 LV_GetText(Bc, A_Index, 1)
                 LV_GetText(Qn, A_Index, 4)
@@ -63,9 +67,27 @@
 
                 Cost += Buy
                 Obj.Write(((A_Index > 1) ? "|" : "> ") Bc ";" Name ";" SellStr ";" Sell ";" BuyStr ";" Buy ";" Sell - Buy)
-            }
 
+                If (Counter < 10) {
+                    IniRead, Output, Dump\Last10S.ini, Last10S, %Bc%
+                    If (Output && Output != "ERROR") {
+                        IniDelete, Dump\Last10S.ini, Last10S, %Bc%
+                    } Else {
+                        ++Counter
+                    }
+                } Else {
+                    IniRead, Output, Dump\Last10S.ini, Last10S, %Bc%
+                    If (Output && Output != "ERROR") {
+                        IniDelete, Dump\Last10S.ini, Last10S, %Bc%
+                    } Else {
+                        IniRead, Output, Dump\Last10S.ini, Last10S
+                        IniDelete, Dump\Last10S.ini, Last10S, % SubStr(Output, 1, InStr(Output, "=") - 1)
+                    }
+                }
+                IniWrite, %Qn%, Dump\Last10S.ini, Last10S, %Bc%
+            }
             Obj.Write("> " Sum ";" Cost ";" Sum - Cost)
+            IniWrite, %Counter%, Dump\Last10S.ini, Counter, Counter
 
             GuiControlGet, Remise, , Remise
             GuiControlGet, Client, , Client
@@ -88,7 +110,7 @@
             CartView()
             WriteSession()
             CalculateSum()
-
+            CheckLatestSells()
             TrancsView(1, 1)
             Selling := 0
         }

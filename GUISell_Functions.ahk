@@ -171,3 +171,21 @@ CheckBarcode() {
         GuiControl, Disabled, AddEnter
     }
 }
+
+CheckLatestSells() {
+    Global ProdDefs, SearchList := []
+    If FileExist("Dump\Last10S.ini") {
+        IniRead, Output, Dump\Last10S.ini, Last10S
+        Dummy := ""
+        Loop, Parse, Output, `n, `r
+        {
+            Dummy := Dummy ? SubStr(A_LoopField, 1, InStr(A_LoopField, "=") - 1) "|" Dummy : SubStr(A_LoopField, 1, InStr(A_LoopField, "=") - 1)
+        }
+
+        GuiControl,, Search, |
+        For Each, Bc in StrSplit(Dummy, "|") {
+            GuiControl,, Search, %  "[" Each "] -- " ProdDefs["" Bc ""]["Name"]
+            SearchList.Push("" Bc "")
+        }
+    }
+}
