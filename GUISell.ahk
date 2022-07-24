@@ -9,53 +9,61 @@
 Gui, +HwndMain
 Gui, Margin, 10, 10
 Gui, Color, 0xD8D8AD
-Gui, Font, s15 Bold, Calibri
+Gui, Font, s15 Bold Italic, Calibri
 
 Gui, Add, ListBox, xm ym w190 r10 vSearch gWriteToBc AltSubmit HwndHCtrl
-CtlColors.Attach(HCtrl, "717100", "FFFFFF")
+CtlColors.Attach(HCtrl, "D8D8AD")
 
-Gui, Font, s18
+Gui, Font, s18 norm Bold
 Gui, Add, Button, % "x" A_ScreenWidth - 120 " y" A_ScreenHeight - 110 " w101 h35 HwndHCtrl gLaunchKeyboard"
 ImageButton.Create(HCtrl, [[0, "Img\KBD\1.png"]
                          , [0, "Img\KBD\2.png"]
                          , [0, "Img\KBD\3.png"]
                          , [0, "Img\KBD\4.png"]]*)
 
-Gui, Add, Edit, % "xm y" A_ScreenHeight - 340 " HwndE w190 vItemsSold -E0x200 ReadOnly Center Border -VScroll Hidden " , 0
-Gui, Add, Edit, % "xp yp+" 40 " HwndE w190 vSoldP -E0x200 r2 ReadOnly Center Border -VScroll Hidden cGreen", 0
-Gui, Add, Edit, % "xp yp+" 70 " HwndE w190 vCostP -E0x200 r2 ReadOnly Center Border -VScroll Hidden cRed", 0
-Gui, Add, Edit, % "xp yp+" 70 " HwndE w190 vProfitP -E0x200 r2 ReadOnly Center Border -VScroll Hidden cGreen", 0
+Gui, Add, Edit, % "xm y" A_ScreenHeight - 340 " HwndE w190 vItemsSold -E0x200 ReadOnly Center -VScroll " , 0
+Gui, Add, Edit, % "xp yp+" 40 " HwndE w190 vSoldP -E0x200 r2 ReadOnly Center -VScroll cGreen", 0
+Gui, Add, Edit, % "xp yp+" 70 " HwndE w190 vCostP -E0x200 r2 ReadOnly Center -VScroll cRed", 0
+Gui, Add, Edit, % "xp yp+" 70 " HwndE w190 vProfitP -E0x200 r2 ReadOnly Center -VScroll cGreen", 0
 Gui, Font, s15
 
+GreenButton := [[0, 0x28A745, , 0x000000, 0, , 0x28A745, 1]
+              , [0, 0x2FC250, , 0x000000, 0, , 0x28A745, 2]
+              , [0, 0x33DA59, , 0x000000, 0, , 0x28A745, 2]
+              , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]
+
 Gui, Add, Button, % "xm ym+" 260 " vAddEnter gEnter w190 h30 HwndHCtrl Disabled", % _167
-ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
-                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
-                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
-                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+ImageButton.Create(HCtrl, GreenButton*)
 
-Gui, Add, Button, % "vAddSell xp yp+35 gSpace w190 h30 HwndHCtrl Disabled", % _115
-ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
-                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
-                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
-                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+Gui, Add, Button, % "vAddUp xp yp+35 gUp HwndHCtrl w90 h30 Disabled", % "+"
+ImageButton.Create(HCtrl, GreenButton*)
 
-Gui, Add, Button, % "vAddSubmit xp yp+35 gEnter w190 h30 HwndHCtrl Disabled", % _168
-ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
-                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
-                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
-                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+Gui, Add, Button, % "vAddDown xp+100 yp gDown HwndHCtrl w90 h30 Disabled", % "-"
+ImageButton.Create(HCtrl, GreenButton*)
+
+Gui, Add, Button, % "vAddSell xp-100 yp+35 gSpace w190 h30 HwndHCtrl Disabled", % _115
+ImageButton.Create(HCtrl, GreenButton*)
+
+Gui, Add, Button, % "vAddSubmit xp yp+45 gEnter w190 h30 HwndHCtrl Disabled", % _168
+ImageButton.Create(HCtrl, GreenButton*)
 
 Gui, Add, Button, % "vSubKridi xp yp+35 gSubKridi HwndHCtrl w190 h30 Disabled", % _29
-ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
-                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
-                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
-                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+ImageButton.Create(HCtrl, [[0, 0xB8834E, , 0x000000, 0, , 0x804000, 1]
+                         , [0, 0xBE742A, , 0x000000, 0, , 0x804000, 1]
+                         , [0, 0xBC5E00, , 0x000000, 0, , 0x804000, 1]
+                         , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]* )
+
+Gui, Add, Button, % "vAddDelete xp yp+45 gDelete HwndHCtrl w190 h30 Disabled", % _130
+ImageButton.Create(HCtrl, [[0, 0xFCB66F, , 0x000000, 0, , 0xFF8000, 1]
+                         , [0, 0xFCA955, , 0x000000, 0, , 0xFF8000, 1]
+                         , [0, 0xFF8000, , 0x000000, 0, , 0xFF8000, 1]
+                         , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]* )
 
 Gui, Add, Button, % "vCancel xp yp+35 gEsc HwndHCtrl w190 h30 Disabled", % _169
-ImageButton.Create(HCtrl, [[0, 0x28A745, , 0xFFFFFF, 0, , 0x28A745, 1]
-                         , [0, 0xFFFFFF, , 0x28A745, 0, , 0x28A745, 1]
-                         , [0, 0x28A745, , 0xFFFF00, 0, , 0x28A745, 1]
-                         , [0, 0xB2B2B2, , 0x000000, 0, , 0xB2B2B2, 1]]* )
+ImageButton.Create(HCtrl, [[0, 0x834444, , 0xFFFFFF, 0, , 0xFF0000, 1]
+                         , [0, 0x823131, , 0xFFFFFF, 0, , 0xFF0000, 1]
+                         , [0, 0x7D1616, , 0xFFFFFF, 0, , 0xFF0000, 1]
+                         , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]* )
 
 Gui, Font, s25
 pw := (A_ScreenWidth - 235) / 3
@@ -168,6 +176,7 @@ If FileExist("Dump\" Session ".session") {
     CheckBarcode()
 }
 CheckLatestSells()
+CurrentProfit := CalculateCurrent()
 Return
 
 #Include, GUISell_Hotkeys.ahk

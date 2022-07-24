@@ -148,16 +148,46 @@ TrancsView(Tranc, View) {
 CheckListView() {
     GuiControlGet, AddSell, Enabled, AddSell
     GuiControlGet, Cancel, Enabled, Cancel
+    GuiControlGet, AddUp, Enabled, AddUp
+    GuiControlGet, AddDown, Enabled, AddDown
+    GuiControlGet, AddDelete, Enabled, AddDelete
     If LV_GetCount() {
         If (!AddSell)
             GuiControl, Enabled, AddSell
         If (!Cancel)
             GuiControl, Enabled, Cancel
+        If (!AddUp)
+            GuiControl, Enabled, AddUp
+        If (!AddDown)
+            GuiControl, Enabled, AddDown
+        If (!AddDelete)
+            GuiControl, Enabled, AddDelete
     } Else {
         If (AddSell)
             GuiControl, Disabled, AddSell
         If (Cancel)
             GuiControl, Disabled, Cancel
+        If (AddUp)
+            GuiControl, Disabled, AddUp
+        If (AddDown)
+            GuiControl, Disabled, AddDown
+        If (AddDelete)
+            GuiControl, Disabled, AddDelete
+    }
+
+    GuiControlGet, GivenMoney, Visible, GivenMoney
+    GuiControlGet, SubKridi, Enabled, SubKridi
+    GuiControlGet, AddSubmit, Enabled, AddSubmit
+    If (GivenMoney) {
+        If (!SubKridi)
+            GuiControl, Enabled, SubKridi
+        If (!AddSubmit)
+            GuiControl, Enabled, AddSubmit
+    } Else {
+        If (SubKridi)
+            GuiControl, Disabled, SubKridi
+        If (AddSubmit)
+            GuiControl, Disabled, AddSubmit
     }
 }
 
@@ -176,16 +206,41 @@ CheckLatestSells() {
     Global ProdDefs, SearchList := []
     If FileExist("Dump\Last10S.ini") {
         IniRead, Output, Dump\Last10S.ini, Last10S
-        Dummy := ""
-        Loop, Parse, Output, `n, `r
-        {
-            Dummy := Dummy ? SubStr(A_LoopField, 1, InStr(A_LoopField, "=") - 1) "|" Dummy : SubStr(A_LoopField, 1, InStr(A_LoopField, "=") - 1)
-        }
-
-        GuiControl,, Search, |
-        For Each, Bc in StrSplit(Dummy, "|") {
-            GuiControl,, Search, %  "[" Each "] -- " ProdDefs["" Bc ""]["Name"]
-            SearchList.Push("" Bc "")
+        If (Output && Output != "ERROR") {
+            Dummy := ""
+            Loop, Parse, Output, `n, `r
+            {
+                Dummy := Dummy ? SubStr(A_LoopField, 1, InStr(A_LoopField, "=") - 1) "|" Dummy : SubStr(A_LoopField, 1, InStr(A_LoopField, "=") - 1)
+            }
+            GuiControl,, Search, |
+            For Each, Bc in StrSplit(Dummy, "|") {
+                GuiControl,, Search, %  " -- " ProdDefs["" Bc ""]["Name"] " -- "
+                SearchList.Push("" Bc "")
+            }
         }
     }
+}
+
+CalculateCurrent() {
+    Global _37
+    S := B := P := I := 0
+    Loop, Files, Curr\*.sell
+    {
+        FileRead, Content, % A_LoopFileFullPath
+        Content := StrSplit(StrSplit(Content, "> ")[2], "|")
+        For Each, One in Content {
+            F := StrSplit(One, ";")
+            I += StrSplit(F[3], "x")[2]
+            S += F[4]
+            B += F[6]
+            P += F[7]
+        }
+    }
+
+    GuiControl,, ItemsSold, % I " " _37
+    GuiControl,, SoldP,     % S "`n" ConvertMillimsToDT(S)
+    GuiControl,, CostP,     % B "`n" ConvertMillimsToDT(B)
+    GuiControl,, ProfitP,   % P "`n" ConvertMillimsToDT(P)
+
+    Return, [I, S, B, P]
 }

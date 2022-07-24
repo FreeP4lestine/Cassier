@@ -39,6 +39,7 @@
             IniRead, Counter, Dump\Last10S.ini, Counter, Counter
             If Counter is not Digit
                 Counter := 0
+            I := Sum := Cost := 0
             Loop, % LV_GetCount() {
                 LV_GetText(Bc, A_Index, 1)
                 LV_GetText(Qn, A_Index, 4)
@@ -68,6 +69,8 @@
                 Cost += Buy
                 Obj.Write(((A_Index > 1) ? "|" : "> ") Bc ";" Name ";" SellStr ";" Sell ";" BuyStr ";" Buy ";" Sell - Buy)
 
+                I += Qn
+
                 If (Counter < 10) {
                     IniRead, Output, Dump\Last10S.ini, Last10S, %Bc%
                     If (Output && Output != "ERROR") {
@@ -86,8 +89,9 @@
                 }
                 IniWrite, %Qn%, Dump\Last10S.ini, Last10S, %Bc%
             }
-            Obj.Write("> " Sum ";" Cost ";" Sum - Cost)
             IniWrite, %Counter%, Dump\Last10S.ini, Counter, Counter
+
+            Obj.Write("> " Sum ";" Cost ";" Sum - Cost)
 
             GuiControlGet, Remise, , Remise
             GuiControlGet, Client, , Client
@@ -113,6 +117,16 @@
             CheckLatestSells()
             TrancsView(1, 1)
             Selling := 0
+
+            CurrentProfit[1] += I
+            CurrentProfit[2] += Sum
+            CurrentProfit[3] += Cost
+            CurrentProfit[4] += Sum - Cost
+
+            GuiControl,, ItemsSold, % (CurrentProfit[1]) " " _37
+            GuiControl,, SoldP,     % (CurrentProfit[2]) "`n" ConvertMillimsToDT(CurrentProfit[2])
+            GuiControl,, CostP,     % (CurrentProfit[3]) "`n" ConvertMillimsToDT(CurrentProfit[3])
+            GuiControl,, ProfitP,   % (CurrentProfit[4]) "`n" ConvertMillimsToDT(CurrentProfit[4])
         }
         GuiControl, Enabled, Bc
         GuiControl, , Bc
@@ -185,21 +199,16 @@
     Return
 
     Up::
-        GuiControlGet, Focused, FocusV
-        If (Focused = "ListView") {
-            If (Row := LV_GetNext()) {
-                LV_GetText(ThisQn, Row, 4)
-                LV_GetText(ThisBc, Row, 1)
-                VQ := StrSplit(ThisQn, "x")
-                LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))
-            }
-        } Else {
-            If (Row := LV_GetCount()) {
-                LV_GetText(ThisQn, Row, 4)
-                LV_GetText(ThisBc, Row, 1)
-                VQ := StrSplit(ThisQn, "x")
-                LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))
-            }
+        If (Row := LV_GetNext()) {
+            LV_GetText(ThisQn, Row, 4)
+            LV_GetText(ThisBc, Row, 1)
+            VQ := StrSplit(ThisQn, "x")
+            LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))
+        } Else If (Row := LV_GetCount()) {
+            LV_GetText(ThisQn, Row, 4)
+            LV_GetText(ThisBc, Row, 1)
+            VQ := StrSplit(ThisQn, "x")
+            LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] + 1),, VQ[1] "x" VQ[2] + 1, VQ[1] * (VQ[2] + 1))
         }
         CalculateSum()
         WriteSession()
@@ -208,23 +217,19 @@
 
     Down::
         GuiControlGet, Focused, FocusV
-        If (Focused = "ListView") {
-            If (Row := LV_GetNext()) {
-                LV_GetText(ThisQn, Row, 4)
-                LV_GetText(ThisBc, Row, 1)
-                VQ := StrSplit(ThisQn, "x")
-                If (VQ[2] > 1) {
-                    LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
-                }
+        If (Row := LV_GetNext()) {
+            LV_GetText(ThisQn, Row, 4)
+            LV_GetText(ThisBc, Row, 1)
+            VQ := StrSplit(ThisQn, "x")
+            If (VQ[2] > 1) {
+                LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
             }
-        } Else {
-            If (Row := LV_GetCount()) {
-                LV_GetText(ThisQn, Row, 4)
-                LV_GetText(ThisBc, Row, 1)
-                VQ := StrSplit(ThisQn, "x")
-                If (VQ[2] > 1) {
-                    LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
-                }
+        } Else If (Row := LV_GetCount()) {
+            LV_GetText(ThisQn, Row, 4)
+            LV_GetText(ThisBc, Row, 1)
+            VQ := StrSplit(ThisQn, "x")
+            If (VQ[2] > 1) {
+                LV_Modify(Row,,, ProdDefs["" ThisBc ""]["Quantity"] "  >>  " ProdDefs["" ThisBc ""]["Quantity"] - (VQ[2] - 1),, VQ[1] "x" VQ[2] - 1, VQ[1] * (VQ[2] - 1))
             }
         }
         CalculateSum()
@@ -233,8 +238,11 @@
     Return
 
     Delete::
-        GuiControlGet, Focused, FocusV
-        If (Focused = "ListView") && (Row := LV_GetNext()) {
+        If (Row := LV_GetNext()) {
+            LV_Delete(Row)
+            CalculateSum()
+            WriteSession()
+        } Else If (Row := LV_GetCount()) {
             LV_Delete(Row)
             CalculateSum()
             WriteSession()
@@ -246,6 +254,8 @@
         CartView()
         WriteSession()
         CheckBarcode()
+        CheckLatestSells()
+        CheckListView()
     Return
 
     ^F::
