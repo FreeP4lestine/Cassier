@@ -246,6 +246,8 @@
             LV_Delete(Row)
             CalculateSum()
             WriteSession()
+        } Else {
+            CartView()
         }
         CheckListView()
     Return

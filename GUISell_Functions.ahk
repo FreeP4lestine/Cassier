@@ -84,7 +84,6 @@ CalculateSum() {
 CartView() {
     Global Selling
     Selling := 0
-    GuiControl, Enabled, AddEnter
     GuiControl, Disabled, SubKridi
     GuiControl, Disabled, AddSubmit
     GuiControl, Disabled, AddSell
@@ -110,7 +109,6 @@ SellView() {
     Global Selling
     Selling := 1
     GuiControl, Enabled, AddSubmit
-    GuiControl, Disabled, AddEnter
     GuiControl, Enabled, Cancel
     GuiControl, Disabled, AddSell
     GuiControl, Enabled, SubKridi
@@ -174,21 +172,6 @@ CheckListView() {
         If (AddDelete)
             GuiControl, Disabled, AddDelete
     }
-
-    GuiControlGet, GivenMoney, Visible, GivenMoney
-    GuiControlGet, SubKridi, Enabled, SubKridi
-    GuiControlGet, AddSubmit, Enabled, AddSubmit
-    If (GivenMoney) {
-        If (!SubKridi)
-            GuiControl, Enabled, SubKridi
-        If (!AddSubmit)
-            GuiControl, Enabled, AddSubmit
-    } Else {
-        If (SubKridi)
-            GuiControl, Disabled, SubKridi
-        If (AddSubmit)
-            GuiControl, Disabled, AddSubmit
-    }
 }
 
 CheckBarcode() {
@@ -243,4 +226,52 @@ CalculateCurrent() {
     GuiControl,, ProfitP,   % P "`n" ConvertMillimsToDT(P)
 
     Return, [I, S, B, P]
+}
+
+LogIn(Username, Password) {
+    If !FileExist("Sets\" Username ".chu") || (!RD := DB_Read("Sets\" Username ".chu")) {
+        Return, 0
+    }
+
+    Pass := Trim(Trim(RD, "|"), ";")
+    If !(Pass == Password)
+        Return, 0
+    
+    If InStr(RD, ";")
+        Return, 1
+    Return, 2
+}
+
+Decode(string) {
+    if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", 0, "uint*", size, "ptr", 0, "ptr", 0))
+        Return
+    VarSetCapacity(buf, size, 0)
+    if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", &buf, "uint*", size, "ptr", 0, "ptr", 0))
+        Return
+    return, StrGet(&buf, size, "UTF-8")
+}
+
+DB_Read(FileName, FastMode := 0) {
+    DBObj := FileOpen(FileName, "r")
+    If !(FastMode) {
+        Hedr := ""
+        Loop, 14 {
+            Hedr .= Chr(DBObj.ReadChar())
+        }
+        If (Hedr != "CH-26259084-DB")
+            Return, 0
+        Info := ""
+        DBObj.Pos := 1024
+        Loop {
+            Info .= (ThisChar := Chr(DBObj.ReadChar()))
+        } Until (ThisChar = "")
+    } Else {
+        DBObj.RawRead(Data, Len := DBObj.Length())
+        Pos := 1023, Info := ""
+        While (Byte := NumGet(Data, Pos += 1, "Char")) {
+            Info .= Chr(Byte)
+        }
+        DBObj.Close()
+    }
+    Return, Decode(Info)
 }

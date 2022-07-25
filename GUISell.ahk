@@ -6,6 +6,11 @@
 
 #Include, Lib\Language.ahk
 
+If !Level := LogIn(AdminName := A_Args[1], AdminPass := A_Args[2]) {
+    MsgBox, 16, % _112, % _114
+    ExitApp
+}
+
 Gui, +HwndMain
 Gui, Margin, 10, 10
 Gui, Color, 0xD8D8AD
@@ -30,7 +35,7 @@ Gui, Font, s15
 GreenButton := [[0, 0x28A745, , 0x000000, 0, , 0x28A745, 1]
               , [0, 0x2FC250, , 0x000000, 0, , 0x28A745, 2]
               , [0, 0x33DA59, , 0x000000, 0, , 0x28A745, 2]
-              , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]
+              , [0, 0xD8D8AD, , 0xB2B2B2, 0, , 0xB2B2B2, 2]]
 
 Gui, Add, Button, % "xm ym+" 260 " vAddEnter gEnter w190 h30 HwndHCtrl Disabled", % _167
 ImageButton.Create(HCtrl, GreenButton*)
@@ -51,19 +56,19 @@ Gui, Add, Button, % "vSubKridi xp yp+35 gSubKridi HwndHCtrl w190 h30 Disabled", 
 ImageButton.Create(HCtrl, [[0, 0xB8834E, , 0x000000, 0, , 0x804000, 1]
                          , [0, 0xBE742A, , 0x000000, 0, , 0x804000, 1]
                          , [0, 0xBC5E00, , 0x000000, 0, , 0x804000, 1]
-                         , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]* )
+                         , [0, 0xD8D8AD, , 0xB2B2B2, 0, , 0xB2B2B2, 2]]* )
 
 Gui, Add, Button, % "vAddDelete xp yp+45 gDelete HwndHCtrl w190 h30 Disabled", % _130
 ImageButton.Create(HCtrl, [[0, 0xFCB66F, , 0x000000, 0, , 0xFF8000, 1]
                          , [0, 0xFCA955, , 0x000000, 0, , 0xFF8000, 1]
                          , [0, 0xFF8000, , 0x000000, 0, , 0xFF8000, 1]
-                         , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]* )
+                         , [0, 0xD8D8AD, , 0xB2B2B2, 0, , 0xB2B2B2, 2]]* )
 
 Gui, Add, Button, % "vCancel xp yp+35 gEsc HwndHCtrl w190 h30 Disabled", % _169
 ImageButton.Create(HCtrl, [[0, 0x834444, , 0xFFFFFF, 0, , 0xFF0000, 1]
                          , [0, 0x823131, , 0xFFFFFF, 0, , 0xFF0000, 1]
                          , [0, 0x7D1616, , 0xFFFFFF, 0, , 0xFF0000, 1]
-                         , [0, 0xD8D8AD, , 0x000000, 0, , 0xB2B2B2, 2]]* )
+                         , [0, 0xD8D8AD, , 0xB2B2B2, 0, , 0xB2B2B2, 2]]* )
 
 Gui, Font, s25
 pw := (A_ScreenWidth - 235) / 3
@@ -107,8 +112,6 @@ Gui, Add, ListView, % "HwndHCtrl x225 yp+33 w" pw*2 " h" A_ScreenHeight - 290 " 
 SetExplorerTheme(HCtrl)
 
 LV_ModifyCol(1, "0 Center")
-
-AdminName := "ADM"
 
 LV_ModifyCol(2, pw / 2)
 LV_ModifyCol(3, pw / 2 " Center")
@@ -161,10 +164,6 @@ Loop, 10 {
     Gui, Add, Text, % "y" A_Index + A_ScreenHeight - 78 " x" 3 + A_Index " w203 h1 HwndHCtrl"
     CtlColors.Attach(HCtrl, "717100")
 }
-
-
-AdminName := A_Args[1]
-AdminPass := A_Args[2]
 
 GuiControl, Disabled, Session1
 Selling     := 0
